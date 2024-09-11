@@ -167,18 +167,17 @@ struct UVIndexView: View {
             }
         }
     }
-} 
+}
 
 //  MARK: 4. for reapplication button
 struct FloatingButton: View {
-    @Binding var canPressButton: Bool
-    @Binding var currentTime: Date
-    @Binding var nextTime: Date
+    let nextTime = SharedDataManager.shared.getEnvironmentData().nextTime
+    let pressAble = StateManager.shared.canPressButton()
     var action: () -> Void
 
     var body: some View {
         Button(action: {
-            if canPressButton {
+            if pressAble {
                 action()
             }
         }) {
@@ -191,14 +190,14 @@ struct FloatingButton: View {
                 )
                 .shadow(radius: 5)
         }
-        .disabled(!canPressButton)
+        .disabled(!pressAble)
         .position(x: UIScreen.main.bounds.width - 40, y: UIScreen.main.bounds.height - 100)
     }
     
     private var buttonColor: Color {
-        if !canPressButton {
+        if !pressAble {
             return .gray
-        } else if currentTime > nextTime {
+        } else if Date() > nextTime {
             return .orange
         } else {
             return .blue

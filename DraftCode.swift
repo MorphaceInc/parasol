@@ -133,4 +133,3 @@ class WidgetManager {
         //  takes minToReapp in Int
     }
 }
-

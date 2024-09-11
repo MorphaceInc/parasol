@@ -31,8 +31,7 @@ struct ContentView: View {
 
     var body: some View {
         TabView {
-            let envData = SharedDataManager.shared.getEnvironmentData()
-            //  MARK: 0th tab - Home page
+            //  MARK: 1st tab - Home page
             ScrollView {
                 VStack(spacing: 20) {
                     // top section - header info
@@ -72,131 +71,123 @@ struct ContentView: View {
                     .disabled(AnimationManager.shared.isLoading)
                     
                     // bottom section - UV plot
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.2))
-                        .frame(height: 300)
-                        .overlay(Text("UV placeholder"))
+                    UVIndexView()
                 }
                 .padding()
             }.tabItem {
                 Image(systemName: "house")
                 Text("Main page")
-            }.overlay(
-                FloatingButton(canPressButton: $canPressButton, currentTime: Date(), nextTime: envData.nextTime) {
-                    print("Button pressed!")
-                }
-            )
+            }
             
-            //  MARK: 1st tab - home values
-            VStack {
-                let envData = SharedDataManager.shared.getEnvironmentData()
-                let useData = SharedDataManager.shared.getUserData()
-                let uiFunctions = UIDisplayFunctions()
-                let nextTimeString = uiFunctions.displayNextTime()
-                
-                Text("For Fitzpatrick skin type \(useData.skinType), using SPF \(useData.spfUsed);")
-                Text("located latitude \(envData.latitude), longitude \(envData.longitude)")
-                Text("\nsunMax at \(envData.sunmaxTime)")
-                Text("sunSet at \(envData.sunsetTime)")
-                Text("\nuv now \(envData.uv), reapply after \(envData.minToReapp) min")
-                Text("at \(envData.nextTime), or simply put, \(nextTimeString)")
-                Text("SPF recommended is \(uiFunctions.convertToSPFRecommendation(envData.spfRecm))")
-                
-                Button("Apply sunscreen") {
-                    //  MARK: ***archive this function later
-                    StateManager.shared.oldhandleButtonPress()
+            //  MARK: 2nd tab - debugging values
+            ScrollView {
+                VStack {
+                    let envData = SharedDataManager.shared.getEnvironmentData()
+                    let useData = SharedDataManager.shared.getUserData()
+                    let uiFunctions = UIDisplayFunctions()
+                    let nextTimeString = uiFunctions.displayNextTime()
+                    
+                    Text("For Fitzpatrick skin type \(useData.skinType), using SPF \(useData.spfUsed);")
+                    Text("located latitude \(envData.latitude), longitude \(envData.longitude)")
+                    Text("\nsunMax at \(envData.sunmaxTime)")
+                    Text("sunSet at \(envData.sunsetTime)")
+                    Text("\nuv now \(envData.uv), reapply after \(envData.minToReapp) min")
+                    Text("at \(envData.nextTime), or simply put, \(nextTimeString)")
+                    Text("SPF recommended is \(uiFunctions.convertToSPFRecommendation(envData.spfRecm))")
+                    
+                    Button("old handle button press") {
+                        //  MARK: ***archive this function later
+                        StateManager.shared.oldhandleButtonPress()
+                        updateButtonState()
+                    }
+                    .disabled(!canPressButton)
+                    
+                    Button("[success] day start - update coordinates"){
+                        locationService.getCurrentLocation {_ in
+                        }
+                    }.buttonStyle(.borderedProminent)
+                    
+                    
+                    Button("[success] day start - sunrise, max, set Times"){
+                        APIService.shared.fetchTodayJSON(latitude: envData.latitude, longitude: envData.longitude) { result in
+                            switch result {
+                            case .success(let jsondata):
+                                //  WHAT TO DO
+                                APIService.shared.updatesunmaxTimeAndsunsetTime(jsonData: jsondata)
+                            case .failure(let error):
+                                print(error)
+                            }
+                        }
+                    }.buttonStyle(.borderedProminent)
+                    
+                    Button("[success] upper day - uv, minToReapp"){
+                        APIService.shared.fetchTodayJSON(latitude: envData.latitude, longitude: envData.longitude) { result in
+                            switch result {
+                            case .success(let jsondata):
+                                APIService.shared.updateUVAndMinToReappOnForecast(jsonData: jsondata)
+                            case .failure(let error):
+                                print(error)
+                            }
+                        }
+                    }.buttonStyle(.borderedProminent)
+                    
+                    Button("[success] lower day - uv, minToReapp"){
+                        APIService.shared.fetchTodayJSON(latitude: envData.latitude, longitude: envData.longitude) { result in
+                            switch result {
+                            case .success(let jsondata):
+                                APIService.shared.updateUVAndMinToReapp(jsonData: jsondata)
+                            case .failure(let error):
+                                print(error)
+                            }
+                        }
+                    }.buttonStyle(.borderedProminent)
+                    
+                    Button("[success] sunset - spfRecm, Forecasts"){
+                        APIService.shared.fetchTomorrowJSON(latitude: envData.latitude, longitude: envData.longitude) { result in
+                            switch result {
+                            case .success(let jsondata):
+                                APIService.shared.updateSpfRecm(jsonData: jsondata)
+                                APIService.shared.updateUVForecast(jsonData: jsondata)
+                            case .failure(let error):
+                                print(error)
+                            }
+                        }
+                    }.buttonStyle(.borderedProminent)
+                    
+                    List {
+                        ForEach(envData.uvForecasts, id: \.0) { forecast in
+                            HStack {
+                                Text("\(forecast.0)")
+                                Spacer()
+                                Text(String(format: "%.4f", forecast.1))
+                            }
+                        }
+                    }
+                    .frame(height: CGFloat(envData.uvForecasts.count * 50))
+                    
+                }
+                .onReceive(timeZoneObserver.$timeZoneChanged) { changed in
+                    if changed {
+                        print("Time zone change received in App's view")
+                        StateManager.shared.handleTimeZoneChange()
+                        updateButtonState()
+                    }
+                }
+                .onAppear {
                     updateButtonState()
+                    if isFirstLaunch() {
+                        print("first ever launch detected")
+                        StateManager.shared.handleFirstOpen()
+                    } else {
+                        print("regular launch detected")
+                    }
                 }
-                .disabled(!canPressButton)
-                
-                Button("[success] day start - update coordinates"){
-                    locationService.getCurrentLocation {_ in
-                    }
-                }.buttonStyle(.borderedProminent)
-                
-                
-                Button("[success] day start - sunrise, max, set Times"){
-                    APIService.shared.fetchTodayJSON(latitude: envData.latitude, longitude: envData.longitude) { result in
-                        switch result {
-                        case .success(let jsondata):
-                            //  WHAT TO DO
-                            APIService.shared.updatesunmaxTimeAndsunsetTime(jsonData: jsondata)
-                        case .failure(let error):
-                            print(error)
-                        }
-                    }
-                }.buttonStyle(.borderedProminent)
-                
-                Button("[success] upper day - uv, minToReapp"){
-                    APIService.shared.fetchTodayJSON(latitude: envData.latitude, longitude: envData.longitude) { result in
-                        switch result {
-                        case .success(let jsondata):
-                            APIService.shared.updateUVAndMinToReappOnForecast(jsonData: jsondata)
-                        case .failure(let error):
-                            print(error)
-                        }
-                    }
-                }.buttonStyle(.borderedProminent)
-                
-                Button("[success] lower day - uv, minToReapp"){
-                    APIService.shared.fetchTodayJSON(latitude: envData.latitude, longitude: envData.longitude) { result in
-                        switch result {
-                        case .success(let jsondata):
-                            APIService.shared.updateUVAndMinToReapp(jsonData: jsondata)
-                        case .failure(let error):
-                            print(error)
-                        }
-                    }
-                }.buttonStyle(.borderedProminent)
-                
-                Button("[success] sunset - spfRecm, Forecasts"){
-                    APIService.shared.fetchTomorrowJSON(latitude: envData.latitude, longitude: envData.longitude) { result in
-                        switch result {
-                        case .success(let jsondata):
-                            APIService.shared.updateSpfRecm(jsonData: jsondata)
-                            APIService.shared.updateUVForecast(jsonData: jsondata)
-                        case .failure(let error):
-                            print(error)
-                        }
-                    }
-                }.buttonStyle(.borderedProminent)
+            }.tabItem {
+                Image(systemName: "wrench.and.screwdriver.fill")
+                Text("Display Values")
             }
-            .onReceive(timeZoneObserver.$timeZoneChanged) { changed in
-                if changed {
-                    print("Time zone change received in App's view")
-                    StateManager.shared.handleTimeZoneChange()
-                    updateButtonState()
-                }
-            }
-            .onAppear {
-                updateButtonState()
-                if isFirstLaunch() {
-                    print("first ever launch detected")
-                    StateManager.shared.handleFirstOpen()
-                } else {
-                    print("regular launch detected")
-                }
-            }
-            .tabItem {
-                Image(systemName: "house")
-                Text("Home Values")
-            }
-            
-            //  MARK: 2nd tab - UV columns
-            UVForecastView()
-                .tabItem{
-                    Image(systemName: "sun.max.fill")
-                    Text("Forecast values")
-                }
-            
-            //  MARK: 3rd tab - UV plot
-            UVIndexView()
-                .tabItem {
-                    Image(systemName: "sun.max")
-                    Text("Sun Intensity Plot")
-                }
-            
-            //  MARK: 4th designed tab
+
+            //  MARK: 3rd designed user profile
             NavigationView {
                 ScrollView {
                     VStack(spacing: 20) {
@@ -269,6 +260,11 @@ struct ContentView: View {
                 Text("weee")
             }
         }
+        .overlay(
+            FloatingButton() {
+                print("Button pressed!")
+            }
+        )
     }
     
     private func updateButtonState() {
@@ -328,21 +324,3 @@ class TimeZoneObserver: ObservableObject {
 //        // Handle any errors, complete the background task
 //    }
 //}
-
-//  MARK: for viewing UV values
-struct UVForecastView: View {
-    let envData = SharedDataManager.shared.getEnvironmentData()
-    
-    var body: some View {
-        List {
-            ForEach(envData.uvForecasts, id: \.0) { forecast in
-                HStack {
-                    Text("\(forecast.0)")
-                    Spacer()
-                    Text(String(format: "%.4f", forecast.1))
-                }
-            }
-        }
-        .navigationTitle("UV Forecast Values")
-    }
-}
