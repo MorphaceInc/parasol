@@ -94,11 +94,16 @@ class APIService {
     }
     
     func fetchTomorrowJSON(latitude: Double, longitude: Double, completion: @escaping (Result<[String: Any], Error>) -> Void) {
-        let tmr = Calendar.current.date(byAdding: .day, value: 1, to: Date())!
-        let tmrNoon = Calendar.current.date(bySettingHour: 12, minute: 00, second: 0, of: tmr)!
+        let lastSunmax = SharedDataManager.shared.getEnvironmentData().sunmaxTime
+        let calendar = Calendar.current
+        let tmr = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: Date())!)
+        let offsetTime = calendar.dateComponents([.hour, .minute, .second], from: calendar.startOfDay(for: lastSunmax), to: lastSunmax)
+        let tmrMax = calendar.date(byAdding: offsetTime, to: tmr)!
+        print("guessing the tmr max time to be \(tmrMax)")
+
         let dateFormatter = ISO8601DateFormatter()
         dateFormatter.formatOptions = [.withInternetDateTime]
-        let formattedDate = dateFormatter.string(from: tmrNoon)
+        let formattedDate = dateFormatter.string(from: tmrMax)
         let urlString = "https://api.openuv.io/api/v1/forecast?lat=\(latitude)&lng=\(longitude)&dt=\(formattedDate)"
         
         guard let url = URL(string: urlString) else {
