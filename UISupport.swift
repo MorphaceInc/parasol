@@ -167,7 +167,7 @@ struct UVIndexView: View {
             }
         }
     }
-}
+} 
 
 //  MARK: 4. for reapplication button
 struct FloatingButton: View {
