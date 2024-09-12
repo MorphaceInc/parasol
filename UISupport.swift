@@ -148,31 +148,34 @@ struct UVIndexView: View {
     @State private var smoothnessFactor: CGFloat = 0.45
     
     var body: some View {
-        VStack {
-            Text("UV Forecast Plot")
-                .font(.title)
+        VStack(alignment: .leading, spacing: 16) {
+            Text("SPF \(UIDisplayFunctions().convertToSPFRecommendation()) is recommended for today/tomorrow's sun intensity")
+                .font(.titleCustom)
             
             if let firstForecastDate = envData.uvForecasts.first?.0 ,
                let lastForecastTime = envData.uvForecasts.last?.0 {
                 
                 if Calendar.current.isDate(Date(), inSameDayAs: firstForecastDate) && Date() <= lastForecastTime {
                     UVChartFunctions.plotEnhancedChart(dataPoints: envData.uvForecasts, smoothnessFactor: smoothnessFactor, currentDate: Date())
-                        .frame(height: 300)
-                        .padding()
+                        .frame(height: 220)
+                        .frame(maxWidth: .infinity)
                 } else {
                     UVChartFunctions.plotBasicChart(dataPoints: envData.uvForecasts, smoothnessFactor: smoothnessFactor)
-                        .frame(height: 300)
-                        .padding()
+                        .frame(height: 220)
+                        .frame(maxWidth: .infinity)
                 }
             }
         }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(radius: 5)
     }
 }
 
 //  MARK: 4. for reapplication button
 struct FloatingButton: View {
-    let nextTime = SharedDataManager.shared.getEnvironmentData().nextTime
-    let pressAble = StateManager.shared.canPressButton()
+    @State private var pressAble: Bool = false
     var action: () -> Void
 
     var body: some View {
@@ -191,13 +194,16 @@ struct FloatingButton: View {
                 .shadow(radius: 5)
         }
         .disabled(!pressAble)
-        .position(x: UIScreen.main.bounds.width - 40, y: UIScreen.main.bounds.height - 100)
+        .onAppear {
+            pressAble = StateManager.shared.canPressButton()
+        }
+        .position(x: UIScreen.main.bounds.width - 60, y: UIScreen.main.bounds.height - 200)
     }
     
     private var buttonColor: Color {
         if !pressAble {
             return .gray
-        } else if Date() > nextTime {
+        } else if Date() > SharedDataManager.shared.getEnvironmentData().nextTime {
             return .orange
         } else {
             return .blue

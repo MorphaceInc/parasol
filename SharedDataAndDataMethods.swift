@@ -77,6 +77,7 @@ struct UserData: Codable {
 struct EnvironmentData: Codable {
     var latitude: Double
     var longitude: Double
+    var cityName: String
     var sunriseTime: Date
     var sunmaxTime: Date
     var sunsetTime: Date
@@ -86,9 +87,10 @@ struct EnvironmentData: Codable {
     var spfRecm: Int
     var nextTime: Date
     
-    init(latitude: Double, longitude: Double, sunriseTime: Date, sunmaxTime: Date, sunsetTime: Date, uv: Double, minToReapp: Int, uvForecasts: UVForecast, spfRecm: Int, nextTime: Date) {
+    init(latitude: Double, longitude: Double, cityName: String, sunriseTime: Date, sunmaxTime: Date, sunsetTime: Date, uv: Double, minToReapp: Int, uvForecasts: UVForecast, spfRecm: Int, nextTime: Date) {
         self.latitude = latitude
         self.longitude = longitude
+        self.cityName = cityName
         self.sunriseTime = sunriseTime
         self.sunmaxTime = sunmaxTime
         self.sunsetTime = sunsetTime
@@ -102,6 +104,7 @@ struct EnvironmentData: Codable {
     static let defaultValue = EnvironmentData(
         latitude: 37.334606,
         longitude: -122.009102,
+        cityName: "Unknown Location",
         sunriseTime: Calendar.current.date(bySettingHour: 8, minute: 0, second: 0, of: Date())!,
         sunmaxTime: Calendar.current.date(bySettingHour: 12, minute: 0, second: 0, of: Date())!,
         sunsetTime: Calendar.current.date(bySettingHour: 18, minute: 0, second: 0, of: Date())!,
@@ -113,13 +116,14 @@ struct EnvironmentData: Codable {
     )
     
     enum CodingKeys: String, CodingKey {
-        case latitude, longitude, sunriseTime, sunmaxTime, sunsetTime, uv, minToReapp, uvForecasts, spfRecm, nextTime
+        case latitude, longitude, cityName, sunriseTime, sunmaxTime, sunsetTime, uv, minToReapp, uvForecasts, spfRecm, nextTime
     }
     
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         latitude = try container.decode(Double.self, forKey: .latitude)
         longitude = try container.decode(Double.self, forKey: .longitude)
+        cityName = try container.decode(String.self, forKey: .cityName)
         sunriseTime = try container.decode(Date.self, forKey: .sunriseTime)
         sunmaxTime = try container.decode(Date.self, forKey: .sunmaxTime)
         sunsetTime = try container.decode(Date.self, forKey: .sunsetTime)
@@ -142,6 +146,7 @@ struct EnvironmentData: Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(latitude, forKey: .latitude)
         try container.encode(longitude, forKey: .longitude)
+        try container.encode(cityName, forKey: .cityName)
         try container.encode(sunriseTime, forKey: .sunriseTime)
         try container.encode(sunmaxTime, forKey: .sunmaxTime)
         try container.encode(sunsetTime, forKey: .sunsetTime)

@@ -12,90 +12,30 @@ class StateManager {
     static let shared = StateManager()
     private init() {}
     
-    var lastPressDate: Date?
-    
     //  MARK: 1. Button state: determining what to do depending on the time of day
     func canPressButton() -> Bool {
         let envData = SharedDataManager.shared.getEnvironmentData()
         if isFirstPressToday() {
+            print("found it's first press Today")
             return true
         } else {
+            print("found it's nth press today")
             if Date() < envData.sunriseTime {
+                print("found now before sunrise, cannot press")
                 return false
             } else if Date() > envData.sunsetTime {
+                print("found now after sunset, cannot press")
                 return false
             } else {
+                print("found now is inbetween sunrise & sunset, can press")
                 return true
             }
         }
     }
     
     func isFirstPressToday() -> Bool {
-        guard let lastPress = lastPressDate else { return true }
+        guard let lastPress = UserDefaults.standard.object(forKey: "lastPressDate") as? Date else { return true }
         return !Calendar.current.isDate(lastPress, inSameDayAs: Date())
-    }
-    
-    //  MARK: ***decommission
-    func oldhandleButtonPress() {
-        let locationService = LocationService()
-        let pressTime = Date()
-        let forecastsDate = SharedDataManager.shared.getEnvironmentData().uvForecasts.first?.0
-        
-        if isFirstPressToday() {    // first press today
-            locationService.getCurrentLocation {_ in}   // update location
-            let locData = SharedDataManager.shared.getEnvironmentData()
-            let lat = locData.latitude
-            let long = locData.longitude
-            
-            APIService.shared.fetchTodayJSON(latitude: lat, longitude: long) { result in
-                switch result {
-                case .success(let jsondata):
-                    APIService.shared.updatesunmaxTimeAndsunsetTime(jsonData: jsondata) // update sunTimes
-                    let sunData = SharedDataManager.shared.getEnvironmentData()
-                    let sunriseTime = sunData.sunriseTime
-                    let sunmaxTime = sunData.sunmaxTime
-                    let sunsetTime = sunData.sunsetTime
-                    
-                    if pressTime < sunsetTime { // press - sunset
-                        self.scheduleSunsetTasks()
-                        let shouldUpdateOnForecast = sunriseTime < pressTime && pressTime < sunmaxTime && forecastsDate != nil && Calendar.current.isDate(Date(), inSameDayAs: forecastsDate!)
-                        
-                        if shouldUpdateOnForecast {
-                            APIService.shared.updateUVAndMinToReappOnForecast(jsonData: jsondata)
-                        } else {
-                            APIService.shared.updateUVAndMinToReapp(jsonData: jsondata)
-                        }
-                        
-                    } else {    // sunset - press
-                        self.performSunsetTasks()
-                    }
-                case .failure(let error):
-                    print(error)
-                }
-            }
-            
-        } else {    // iterative presses today
-            let lat = SharedDataManager.shared.getEnvironmentData().latitude
-            let long = SharedDataManager.shared.getEnvironmentData().longitude
-            let sunriseTime = SharedDataManager.shared.getEnvironmentData().sunriseTime
-            let sunmaxTime = SharedDataManager.shared.getEnvironmentData().sunmaxTime   // sunset taken care of with canPressButton
-            
-            APIService.shared.fetchTodayJSON(latitude: lat, longitude: long) { result in
-                switch result {
-                case .success(let jsondata):
-                    let shouldUpdateOnForecast = sunriseTime < pressTime && pressTime < sunmaxTime && forecastsDate != nil && Calendar.current.isDate(Date(), inSameDayAs: forecastsDate!)
-                    
-                    if shouldUpdateOnForecast {
-                        APIService.shared.updateUVAndMinToReappOnForecast(jsonData: jsondata)
-                    } else {
-                        APIService.shared.updateUVAndMinToReapp(jsonData: jsondata)
-                    }
-                case .failure(let error):
-                    print(error)
-                }
-            }
-        }
-        updateLastPressDate()
     }
     
     func handleButtonPress() async -> Bool {
@@ -158,21 +98,15 @@ class StateManager {
                     }
                 }
             }
-            updateLastPressDate()
+            UserDefaults.standard.set(Date(), forKey: "lastPressDate")
             return true
         }
-    }
-    
-    func updateLastPressDate() {
-        lastPressDate = Date()
-        UserDefaults.standard.set(lastPressDate, forKey: "lastButtonPressDate")
     }
     
     //  MARK: 2. First opening the App and timezone change: updating every location-dependent data
     func handleTimeZoneChange() {
         print("executing function handleTimeZoneChange")
-        lastPressDate = nil
-        UserDefaults.standard.removeObject(forKey: "lastButtonPressDate")
+        UserDefaults.standard.removeObject(forKey: "lastPressDate")
         handleFirstOpen()
     }
     
@@ -242,7 +176,7 @@ class StateManager {
 class AnimationManager: ObservableObject {
     static let shared = AnimationManager()
     @Published var isLoading = false
-    @Published var currentView: SunscreenState = .drain
+    @Published var currentView: SunscreenState = .wiggle
     enum SunscreenState {
         case drain
         case reload
@@ -270,6 +204,7 @@ class AnimationManager: ObservableObject {
         isLoading = false
         
         if success {
+            UserDefaults.standard.set(Date(), forKey: "lastPressDate")
             updateCurrentView()
         } else {
             currentView = .wiggle
@@ -278,10 +213,8 @@ class AnimationManager: ObservableObject {
     
     func updateCurrentView() {
         if Date() > SharedDataManager.shared.getEnvironmentData().nextTime {
-            print("finished cuz now is \(Date()), which is after \(SharedDataManager.shared.getEnvironmentData().nextTime)")
             currentView = .wiggle
         } else {
-            print("still draining cuz now is \(Date()), which is before \(SharedDataManager.shared.getEnvironmentData().nextTime)")
             currentView = .drain
         }
     }

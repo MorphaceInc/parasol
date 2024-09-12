@@ -30,8 +30,10 @@ struct UVChartFunctions {
         GeometryReader { geometry in
             ZStack {
                 plotBasicChart(dataPoints: dataPoints, smoothnessFactor: smoothnessFactor)
-                Circle()    // Sun indicator
-                    .fill(Color.yellow)
+                Image(systemName: "sun.max.fill")
+                    .foregroundColor(.yellow)
+                    .font(.system(size: 30))
+                    .shadow(color: .yellow.opacity(0.3), radius: 2, x: 0, y: 2)
                     .frame(width: 10, height: 10)
                     .position(positionForDate(currentDate, dataPoints: dataPoints, in: geometry))
             }
@@ -70,7 +72,8 @@ struct UVChartFunctions {
             }
             path.addLine(to: points[points.count - 1])
         }
-        .stroke(Color.blue, lineWidth: 5)
+        .stroke(Color.orange, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+        .shadow(color: Color.orange.opacity(0.3), radius: 4, x: 0, y: 2)
     }
     
     private static func catmullRomSpline(p0: CGPoint, p1: CGPoint, p2: CGPoint, p3: CGPoint, smoothnessFactor: CGFloat) -> [CGPoint] {
@@ -103,35 +106,50 @@ struct UVChartFunctions {
     //  creating axes labels
     private static func yAxisLabels(maxUV: Double, geometry: GeometryProxy) -> some View {
         let stepCount = 5
-        return VStack(alignment: .leading, spacing: 0) {
+        let formatter = NumberFormatter()
+        formatter.maximumFractionDigits = 1
+        formatter.minimumFractionDigits = 1
+        
+        return VStack(alignment: .trailing, spacing: 0) {
             ForEach(0...stepCount, id: \.self) { i in
                 Spacer()
-                Text(String(format: "%.1f", maxUV * Double(stepCount - i) / Double(stepCount)))
-                    .font(.caption)
-                    .frame(width: 30, alignment: .trailing)
+                if i < stepCount {
+                    Text(formatter.string(from: NSNumber(value: maxUV * Double(stepCount - i) / Double(stepCount))) ?? "")
+                        .font(.captionCustom)
+                        .frame(width: 30, alignment: .trailing)
+                }
             }
         }
-        .frame(width: 40, height: geometry.size.height - 40, alignment: .leading)
+        .frame(height: geometry.size.height - 40)
+        .offset(y: -10)  // Adjust vertical alignment
     }
 
     private static func xAxisLabels(dataPoints: [(Date, Double)], geometry: GeometryProxy) -> some View {
         let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "HH:mm"
+        dateFormatter.dateFormat = "Ha"
         
-        return HStack(spacing: 0) {
-            ForEach(dataPoints.indices, id: \.self) { i in
-                if i % 2 == 0 { // Display every other label to avoid crowding
-                    Text(dateFormatter.string(from: dataPoints[i].0))
-                        .font(.caption)
-                        .frame(width: (geometry.size.width - 40) / CGFloat(dataPoints.count - 1))
-                } else {
-                    Spacer()
-                        .frame(width: (geometry.size.width - 40) / CGFloat(dataPoints.count - 1))
-                }
+        let markedHours = [9, 12, 15, 18]
+        let calendar = Calendar.current
+        
+        func findNearestPoint(for hour: Int) -> CGFloat {
+            let targetDate = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: dataPoints[0].0)!
+            let index = dataPoints.indices.min(by: { abs(calendar.dateComponents([.minute], from: dataPoints[$0].0, to: targetDate).minute ?? 0) < abs(calendar.dateComponents([.minute], from: dataPoints[$1].0, to: targetDate).minute ?? 0) }) ?? 0
+            let position = CGFloat(index) / CGFloat(dataPoints.count - 1)
+            let result = position * geometry.size.width
+            return position * geometry.size.width
+        }
+        
+        let labelPositions = markedHours.map { findNearestPoint(for: $0) }
+        
+        return ZStack(alignment: .leading) {
+            ForEach(Array(zip(markedHours, labelPositions)), id: \.0) { hour, position in
+                Text(dateFormatter.string(from: calendar.date(bySettingHour: hour, minute: 0, second: 0, of: dataPoints[0].0)!).lowercased())
+                    .font(.captionCustom)
+                    .frame(width: 40)
+                    .offset(x: position - 20)
             }
         }
-        .frame(width: geometry.size.width - 40, height: 20, alignment: .leading)
-        .offset(x: 40)
+        .frame(width: geometry.size.width, height: 20, alignment: .leading)
     }
     
     private static func positionForDate(_ date: Date, dataPoints: [(Date, Double)], in geometry: GeometryProxy) -> CGPoint {
@@ -155,7 +173,8 @@ struct UVChartFunctions {
 //  MARK: 2. calculating understandable texts & time to display
 struct UIDisplayFunctions {
     // convert SPF type to comprehensible statments
-    func convertToSPFRecommendation(_ value: Int) -> String {
+    func convertToSPFRecommendation() -> String {
+        let value = SharedDataManager.shared.getEnvironmentData().spfRecm
         switch value {
         case 1:
             return "broad spectrum SPF 10"
@@ -222,7 +241,6 @@ class DrainScene: SKScene {
             print("out of bounds with frame \(frame) and texture number \(textures.count)")
             return
         }
-        print("currently displayng \(frame)th frame")
         spriteNode.texture = textures[frame]
     }
 }

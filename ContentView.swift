@@ -12,7 +12,6 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     
     @StateObject private var timeZoneObserver = TimeZoneObserver()
-    @State private var canPressButton: Bool = true
     @State private var buttonPosition = CGPoint(x: UIScreen.main.bounds.width - 100, y: 300)
     
     @ObservedObject private var animationManager = AnimationManager.shared
@@ -36,9 +35,9 @@ struct ContentView: View {
                 VStack(spacing: 20) {
                     // top section - header info
                     VStack(spacing: 10) {
-                        Text("val 1 placeholder")
-                        Text("val 2 placeholder")
-                        Text("val 3 placeholder")
+                        Text("next app time \(UIDisplayFunctions().displayNextTime())")
+                        Text("current uv \(SharedDataManager.shared.getEnvironmentData().uv)")
+                        Text("current city \(SharedDataManager.shared.getEnvironmentData().cityName)")
                     }
                     .padding()
                     .background(Color.backgroundPrimary)
@@ -55,20 +54,15 @@ struct ContentView: View {
                             .frame(height: 300)
                             .onTapGesture {
                                 Task {
+                                    print("case .wiggle .onTapGesture triggered handleButtonPressWithAnimation")
                                     await animationManager.handleButtonPressWithAnimation()
+                                    print("case .wiggle .onTapGesture triggered updateButtonState")
                                 }
                             }
                     case .drain:
                         SunscreenDepletionView()
                             .frame(height: 300)
                     }
-                    
-                    Button("reload") {
-                        Task {
-                            await animationManager.handleButtonPressWithAnimation()
-                        }
-                    }
-                    .disabled(AnimationManager.shared.isLoading)
                     
                     // bottom section - UV plot
                     UVIndexView()
@@ -77,6 +71,20 @@ struct ContentView: View {
             }.tabItem {
                 Image(systemName: "house")
                 Text("Main page")
+            }.onAppear {
+                animationManager.updateCurrentView()
+                if isFirstLaunch() {
+                    print("first ever launch detected")
+                    StateManager.shared.handleFirstOpen()
+                } else {
+                    print("regular launch detected")
+                }
+            }
+            .onReceive(timeZoneObserver.$timeZoneChanged) { changed in
+                if changed {
+                    print("timeZoneObserver changed .onReceive triggered handleTimeZoneChange")
+                    StateManager.shared.handleTimeZoneChange()
+                }
             }
             
             //  MARK: 2nd tab - debugging values
@@ -87,20 +95,11 @@ struct ContentView: View {
                     let uiFunctions = UIDisplayFunctions()
                     let nextTimeString = uiFunctions.displayNextTime()
                     
-                    Text("For Fitzpatrick skin type \(useData.skinType), using SPF \(useData.spfUsed);")
-                    Text("located latitude \(envData.latitude), longitude \(envData.longitude)")
+                    Text("skin type \(useData.skinType), using SPF \(useData.spfUsed);")
+                    Text("located lat \(envData.latitude), long \(envData.longitude)")
                     Text("\nsunMax at \(envData.sunmaxTime)")
                     Text("sunSet at \(envData.sunsetTime)")
-                    Text("\nuv now \(envData.uv), reapply after \(envData.minToReapp) min")
-                    Text("at \(envData.nextTime), or simply put, \(nextTimeString)")
-                    Text("SPF recommended is \(uiFunctions.convertToSPFRecommendation(envData.spfRecm))")
-                    
-                    Button("old handle button press") {
-                        //  MARK: ***archive this function later
-                        StateManager.shared.oldhandleButtonPress()
-                        updateButtonState()
-                    }
-                    .disabled(!canPressButton)
+                    Text("\nreapply after \(envData.minToReapp) min")
                     
                     Button("[success] day start - update coordinates"){
                         locationService.getCurrentLocation {_ in
@@ -165,22 +164,6 @@ struct ContentView: View {
                     }
                     .frame(height: CGFloat(envData.uvForecasts.count * 50))
                     
-                }
-                .onReceive(timeZoneObserver.$timeZoneChanged) { changed in
-                    if changed {
-                        print("Time zone change received in App's view")
-                        StateManager.shared.handleTimeZoneChange()
-                        updateButtonState()
-                    }
-                }
-                .onAppear {
-                    updateButtonState()
-                    if isFirstLaunch() {
-                        print("first ever launch detected")
-                        StateManager.shared.handleFirstOpen()
-                    } else {
-                        print("regular launch detected")
-                    }
                 }
             }.tabItem {
                 Image(systemName: "wrench.and.screwdriver.fill")
@@ -262,13 +245,10 @@ struct ContentView: View {
         }
         .overlay(
             FloatingButton() {
-                print("Button pressed!")
-            }
+                print("floating button pressed!")
+                Task { await animationManager.handleButtonPressWithAnimation() }
+            }.disabled(AnimationManager.shared.isLoading)
         )
-    }
-    
-    private func updateButtonState() {
-        canPressButton = StateManager.shared.canPressButton()
     }
     
     private func isFirstLaunch() -> Bool {

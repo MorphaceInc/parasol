@@ -38,16 +38,50 @@ class LocationService: NSObject, CLLocationManagerDelegate {
         
         let latitude = location.coordinate.latitude
         let longitude = location.coordinate.longitude
-        var currentData = SharedDataManager.shared.getEnvironmentData() //  auto-updates EnvData
+        var currentData = SharedDataManager.shared.getEnvironmentData()
         currentData.latitude = latitude
         currentData.longitude = longitude
-        SharedDataManager.shared.saveEnvironmentData(currentData)
-        locationCompletion((latitude, longitude))
+        
+        getCityName(from: location) { locationName in
+            currentData.cityName = locationName
+            SharedDataManager.shared.saveEnvironmentData(currentData)
+            self.locationCompletion((latitude, longitude))
+        }
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("Failed to find user's location: \(error.localizedDescription)")
         locationCompletion(nil)
+    }
+    
+    func getCityName(from location: CLLocation, completion: @escaping (String) -> Void) {
+        let geocoder = CLGeocoder()
+        geocoder.reverseGeocodeLocation(location) { placemarks, error in
+            if let error = error {
+                print("Reverse geocoding failed: \(error.localizedDescription)")
+                completion("Unknown Location")
+                return
+            }
+            
+            guard let firstPlacemark = placemarks?.first else {
+                print("No placemarks found")
+                completion("Unknown Location")
+                return
+            }
+            
+            // Try to get the most specific name available
+            if let locality = firstPlacemark.locality {
+                completion(locality)
+            } else if let subAdministrativeArea = firstPlacemark.subAdministrativeArea {
+                completion(subAdministrativeArea)
+            } else if let administrativeArea = firstPlacemark.administrativeArea {
+                completion(administrativeArea)
+            } else if let country = firstPlacemark.country {
+                completion(country)
+            } else {
+                completion("Unknown Location")
+            }
+        }
     }
 }
 
@@ -303,6 +337,7 @@ class APIService {
             currentData.sunmaxTime = Calendar.current.date(bySettingHour: 12, minute: 0, second: 0, of: Date()) ?? Date()
             currentData.sunsetTime = Calendar.current.date(bySettingHour: 18, minute: 0, second: 0, of: Date()) ?? Date()
         }
+        
         SharedDataManager.shared.saveEnvironmentData(currentData)
     }
     
