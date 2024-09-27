@@ -242,6 +242,8 @@ struct ContentView: View {
                         .cornerRadius(25)
                     }
                     .padding(40)
+                    //  MARK: opacity transition of the lower card
+                    .transition(.opacity)
                 }
                 .background(Color.backgroundPrimary)
                 .navigationBarHidden(true)

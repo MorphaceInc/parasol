@@ -53,7 +53,7 @@ struct ProfileItemButton: View {
     var body: some View {
         NavigationLink(
             destination: ProfileEditView(userData: $userData, itemType: itemType)
-                .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+                .transition(.opacity)
         ) {
             VStack(alignment: .center) {
                 if let prefix = prefix {
@@ -133,13 +133,13 @@ struct ProfileEditView: View {
                 .frame(width: 200, height: 200)
             
             ZStack{
-                VStack {
+                VStack(spacing: 0) {
                     RoundedRectangle(cornerRadius: 25)
                         .fill(Color.white)
                         .shadow(color: Color.blue.opacity(0.25), radius: 5.7, x: 0, y: 5)
                 }
                 
-                VStack {
+                VStack(spacing: 0) {
                     Text(title)
                         .font(.titleCustom)
                         .foregroundColor(.textPrimary)
