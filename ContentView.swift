@@ -27,7 +27,7 @@ struct ContentView: View {
     //  end UI use
     
     let locationService = LocationService()
-
+    
     var body: some View {
         TabView {
             //  MARK: 1st tab - Home page
@@ -86,14 +86,18 @@ struct ContentView: View {
                     StateManager.shared.handleTimeZoneChange()
                 }
             }
+            .overlay(
+                FloatingButton() {
+                    print("floating button pressed!")
+                    Task { await animationManager.handleButtonPressWithAnimation() }
+                }.disabled(AnimationManager.shared.isLoading)
+            )
             
             //  MARK: 2nd tab - debugging values
             ScrollView {
                 VStack {
                     let envData = SharedDataManager.shared.getEnvironmentData()
                     let useData = SharedDataManager.shared.getUserData()
-                    let uiFunctions = UIDisplayFunctions()
-                    let nextTimeString = uiFunctions.displayNextTime()
                     
                     Text("skin type \(useData.skinType), using SPF \(useData.spfUsed);")
                     Text("located lat \(envData.latitude), long \(envData.longitude)")
@@ -169,69 +173,75 @@ struct ContentView: View {
                 Image(systemName: "wrench.and.screwdriver.fill")
                 Text("Display Values")
             }
-
+            
             //  MARK: 3rd designed user profile
             NavigationView {
-                ScrollView {
-                    VStack(spacing: 20) {
-                        //  top section: name
-                        VStack {
-                            if isEditingName {
-                                TextField("Name", text: $userData.name)
-                                    .font(.largeTitleCustom)
-                                    .multilineTextAlignment(.center)
-                                    .onSubmit {
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            isEditingName = false
-                                        }
-                                        SharedDataManager.shared.saveUserData(userData)
+                VStack(spacing: 20) {
+                    //  top section: name
+                    Spacer()
+                    VStack {
+                        if isEditingName {
+                            TextField("Name", text: $userData.name)
+                                .font(.largeTitleCustom)
+                                .foregroundColor(.textPrimary)
+                                .multilineTextAlignment(.center)
+                                .onSubmit {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        isEditingName = false
                                     }
-                                    .transition(.opacity)
-                            } else {
-                                Text(userData.name)
-                                    .font(.largeTitleCustom)
-                                    .foregroundColor(.textPrimary)
-                                    .onTapGesture {
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            isEditingName = true
-                                        }
-                                    }
-                                    .transition(.opacity)
-                            }
-                            Text("skin profile")
-                                .font(.captionCustom)
-                                .foregroundColor(.textSecondary)
-                        }
-                        .padding()
-                        
-                        //  middle section: background image
-                        Image("regular")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(height: 200)
-                        
-                        //  bottom section: info field
-                        VStack(spacing: 20) {
-                            ForEach([
-                                ("burns", userData.burnLikeliness.rawValue.capitalized, ProfileEditView.ProfileItemType.burn),
-                                ("tans", userData.tanLikeliness.rawValue.capitalized, ProfileEditView.ProfileItemType.tan),
-                                ("foundation", userData.foundationShade.rawValue.capitalized, ProfileEditView.ProfileItemType.foundation),
-                                ("SPF", String(userData.spfUsed), ProfileEditView.ProfileItemType.spf)
-                            ], id: \.0) { title, value, itemType in
-                                NavigationLink(
-                                    destination: ProfileEditView(userData: $userData, itemType: itemType)
-                                        .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
-                                ) {
-                                    ProfileItem(title: title, value: value)
+                                    SharedDataManager.shared.saveUserData(userData)
                                 }
+                                .transition(.opacity)
+                        } else {
+                            Text(userData.name)
+                                .font(.largeTitleCustom)
+                                .foregroundColor(.textPrimary)
+                                .onTapGesture {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        isEditingName = true
+                                    }
+                                }
+                                .transition(.opacity)
+                        }
+                        Text("skin profile")
+                            .font(.headlineCustom)
+                            .foregroundColor(.textPrimary)
+                    }
+                    
+                    //  middle section: background image
+                    Image("regular")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 200, height: 200)
+                    
+                    //  bottom section: info field
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 25)
+                            .fill(Color.white)
+                            .shadow(color: Color.blue.opacity(0.25), radius: 5.7, x: 0, y: 5)
+                        
+                        VStack {
+                            HStack {
+                                ProfileItemButton(title: "burns", value: userData.burnLikeliness.rawValue.capitalized, itemType: .burn, userData: $userData)
+                                    .padding([.top, .leading], 5)
+                                DottedDivider()
+                                ProfileItemButton(title: "tans", value: userData.tanLikeliness.rawValue.capitalized, itemType: .tan, userData: $userData)
+                                    .padding([.top, .trailing], 5)
+                            }
+                            DottedDivider(isHorizontal: true)
+                            HStack {
+                                ProfileItemButton(title: "foundation", value: userData.foundationShade.rawValue.capitalized, itemType: .foundation, userData: $userData, prefix: "uses")
+                                    .padding([.bottom, .leading], 5)
+                                DottedDivider()
+                                ProfileItemButton(title: "SPF", value: String(userData.spfUsed), itemType: .spf, userData: $userData, prefix: "uses")
+                                    .padding([.bottom, .trailing], 5)
                             }
                         }
-                        .padding()
-                        .background(Color.white)
-                        .cornerRadius(15)
-                        .shadow(radius: 5)
+                        .padding(20)
+                        .background(Color.textPrimary.opacity(0.07))
+                        .cornerRadius(25)
                     }
-                    .padding()
+                    .padding(40)
                 }
                 .background(Color.backgroundPrimary)
                 .navigationBarHidden(true)
@@ -243,12 +253,6 @@ struct ContentView: View {
                 Text("weee")
             }
         }
-        .overlay(
-            FloatingButton() {
-                print("floating button pressed!")
-                Task { await animationManager.handleButtonPressWithAnimation() }
-            }.disabled(AnimationManager.shared.isLoading)
-        )
     }
     
     private func isFirstLaunch() -> Bool {
@@ -258,7 +262,7 @@ struct ContentView: View {
             UserDefaults.standard.set(true, forKey: key)
             return true
         }
-            return false
+        return false
     }
 }
 
@@ -287,20 +291,3 @@ class TimeZoneObserver: ObservableObject {
         }
     }
 }
-
-// HOWTO: Immediate fetch and update lat and long
-//SharedDataManager.shared.fetchAndUpdateEnvironmentData(latitude: lat, longitude: lon) { error in
-//    if let error = error {
-//        print("Failed to fetch and update: \(error)")
-//    } else {
-//        print("Successfully fetched and updated environment data")
-//    }
-//}
-
-// HOWTO: In your background fetch handler
-//func performBackgroundFetch() {
-//    let currentLocation = getCurrentLocation() // You'd need to implement this
-//    SharedDataManager.shared.fetchAndUpdateEnvironmentData(latitude: currentLocation.latitude, longitude: currentLocation.longitude) { error in
-//        // Handle any errors, complete the background task
-//    }
-//}

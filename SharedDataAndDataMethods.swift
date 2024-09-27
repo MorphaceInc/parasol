@@ -192,7 +192,7 @@ class SharedDataManager {
         }
         return environmentData
     }
-        
+    
     func saveEnvironmentData(_ environmentData: EnvironmentData) {
         if let encoded = try? JSONEncoder().encode(environmentData) {
             userDefaults?.set(encoded, forKey: environmentDataKey)

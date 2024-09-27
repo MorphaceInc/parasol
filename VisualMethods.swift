@@ -89,14 +89,14 @@ struct UVChartFunctions {
             let m1 = (p2.x - p0.x) * tension
             let m2 = (p3.x - p1.x) * tension
             let x = (2 * p1.x - 2 * p2.x + m1 + m2) * t3 +
-                    (-3 * p1.x + 3 * p2.x - 2 * m1 - m2) * t2 +
-                    m1 * t + p1.x
+            (-3 * p1.x + 3 * p2.x - 2 * m1 - m2) * t2 +
+            m1 * t + p1.x
             
             let n1 = (p2.y - p0.y) * tension
             let n2 = (p3.y - p1.y) * tension
             let y = (2 * p1.y - 2 * p2.y + n1 + n2) * t3 +
-                    (-3 * p1.y + 3 * p2.y - 2 * n1 - n2) * t2 +
-                    n1 * t + p1.y
+            (-3 * p1.y + 3 * p2.y - 2 * n1 - n2) * t2 +
+            n1 * t + p1.y
             
             points.append(CGPoint(x: x, y: y))
         }
@@ -123,7 +123,7 @@ struct UVChartFunctions {
         .frame(height: geometry.size.height - 40)
         .offset(y: -10)  // Adjust vertical alignment
     }
-
+    
     private static func xAxisLabels(dataPoints: [(Date, Double)], geometry: GeometryProxy) -> some View {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "Ha"
@@ -159,7 +159,7 @@ struct UVChartFunctions {
         
         let index = dataPoints.firstIndex { $0.0 > date } ?? dataPoints.count - 1
         let progress = CGFloat(date.timeIntervalSince(dataPoints[index - 1].0)) /
-                       CGFloat(dataPoints[index].0.timeIntervalSince(dataPoints[index - 1].0))
+        CGFloat(dataPoints[index].0.timeIntervalSince(dataPoints[index - 1].0))
         
         let x = CGFloat(index - 1) * xScale + progress * xScale + 40
         let y1 = CGFloat(dataPoints[index - 1].1)
@@ -286,19 +286,19 @@ struct SunscreenDepletionView: View {
 struct AnimatedShakeView: UIViewRepresentable {
     let gifName: String
     @Binding var isAnimating: Bool
-
+    
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: .zero)
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFit
         view.addSubview(imageView)
-
+        
         imageView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             imageView.widthAnchor.constraint(equalTo: view.widthAnchor),
             imageView.heightAnchor.constraint(equalTo: view.heightAnchor)
         ])
-
+        
         if let gifPath = Bundle.main.path(forResource: gifName, ofType: "gif"),
            let data = try? Data(contentsOf: URL(fileURLWithPath: gifPath)),
            let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
@@ -306,12 +306,12 @@ struct AnimatedShakeView: UIViewRepresentable {
             let frameCount = CGImageSourceGetCount(imageSource)
             var frames: [UIImage] = []
             var totalDuration: TimeInterval = 0
-
+            
             for i in 0..<frameCount {
                 if let cgImage = CGImageSourceCreateImageAtIndex(imageSource, i, nil) {
                     let uiImage = UIImage(cgImage: cgImage)
                     frames.append(uiImage)
-
+                    
                     if let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, i, nil) as? [String: Any],
                        let gifProperties = properties[kCGImagePropertyGIFDictionary as String] as? [String: Any],
                        let duration = gifProperties[kCGImagePropertyGIFDelayTime as String] as? TimeInterval {
@@ -319,16 +319,16 @@ struct AnimatedShakeView: UIViewRepresentable {
                     }
                 }
             }
-
+            
             context.coordinator.frames = frames
             context.coordinator.totalDuration = totalDuration
             context.coordinator.imageView = imageView
             context.coordinator.startAnimating()
         }
-
+        
         return view
     }
-
+    
     func updateUIView(_ uiView: UIView, context: Context) {
         if isAnimating {
             context.coordinator.startAnimating()
@@ -336,33 +336,33 @@ struct AnimatedShakeView: UIViewRepresentable {
             context.coordinator.stopAnimating()
         }
     }
-
+    
     func makeCoordinator() -> Coordinator {
         Coordinator(isAnimating: $isAnimating)
     }
-
+    
     class Coordinator: NSObject {
         var frames: [UIImage] = []
         var totalDuration: TimeInterval = 0
         var imageView: UIImageView?
         @Binding var isAnimating: Bool
         var displayLink: CADisplayLink?
-
+        
         init(isAnimating: Binding<Bool>) {
             self._isAnimating = isAnimating
         }
-
+        
         func startAnimating() {
             guard displayLink == nil else { return }
             displayLink = CADisplayLink(target: self, selector: #selector(updateAnimation))
             displayLink?.add(to: .main, forMode: .common)
         }
-
+        
         func stopAnimating() {
             displayLink?.invalidate()
             displayLink = nil
         }
-
+        
         @objc func updateAnimation() {
             guard let imageView = imageView, !frames.isEmpty else { return }
             let frameDuration = totalDuration / TimeInterval(frames.count)

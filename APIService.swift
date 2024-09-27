@@ -16,7 +16,7 @@ class LocationService: NSObject, CLLocationManagerDelegate {
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
     }
-
+    
     func getCurrentLocation(completion: @escaping ((Double, Double)?) -> Void) {
         locationCompletion = completion
         
@@ -90,7 +90,7 @@ class APIService {
     static let shared = APIService()
     
     private init() {}
-    private let apiKey = "openuv-e9hqp7rm01dli5m-io"
+    private let apiKey = "openuv-e9hqp7rm01dli5m-io"    // MARK: ***switch to using .env files
     
     func fetchTodayJSON(latitude: Double, longitude: Double, completion: @escaping (Result<[String: Any], Error>) -> Void) {
         let urlString = "https://api.openuv.io/api/v1/uv?lat=\(latitude)&lng=\(longitude)"
@@ -134,7 +134,7 @@ class APIService {
         let offsetTime = calendar.dateComponents([.hour, .minute, .second], from: calendar.startOfDay(for: lastSunmax), to: lastSunmax)
         let tmrMax = calendar.date(byAdding: offsetTime, to: tmr)!
         print("guessing the tmr max time to be \(tmrMax)")
-
+        
         let dateFormatter = ISO8601DateFormatter()
         dateFormatter.formatOptions = [.withInternetDateTime]
         let formattedDate = dateFormatter.string(from: tmrMax)
@@ -361,7 +361,7 @@ class APIService {
         let safeExposureDosage = calculateSafeExposureDosage(uvIndex: currentData.uv, minToReappConstantUV: currentData.minToReapp)
         print("obtained safe exposure dosage is \(safeExposureDosage) from \(currentData.uv) times by \(currentData.minToReapp)")
         let timeToReachDosage = calculateRealTimeToReachDosage(startDate: currentTime, safeDosage: safeExposureDosage, uvForecasts: currentData.uvForecasts)
-
+        
         guard timeToReachDosage > 0 else {
             currentData.minToReapp = 180 // default 3 hours
             currentData.nextTime = convertminToReappToReappDateTime(currentData.minToReapp)

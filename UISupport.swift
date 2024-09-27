@@ -9,43 +9,69 @@ import SwiftData
 
 //  MARK: 1. colors and fonts
 extension Color {
-    static let backgroundPrimary = Color(red: 0.98, green: 0.98, blue: 0.98)
-    static let accentColor = Color(red: 0.35, green: 0.56, blue: 0.84)
-    static let textPrimary = Color.black
-    static let textSecondary = Color.gray
+    static let backgroundPrimary = Color(red: 1, green: 1, blue: 1)
+    static let textAccent = Color.black
+    static let textPrimary = Color(red: 0.4, green: 0.6, blue: 0.8)
 }
 
 extension Font {
-    static let largeTitleCustom = Font.system(size: 34, weight: .bold, design: .rounded)
-    static let titleCustom = Font.system(size: 28, weight: .semibold, design: .rounded)
-    static let headlineCustom = Font.system(size: 20, weight: .semibold, design: .rounded)
-    static let bodyCustom = Font.system(size: 17, weight: .regular, design: .rounded)
-    static let captionCustom = Font.system(size: 14, weight: .regular, design: .rounded)
+    static let largeTitleCustom = Font.system(size: 52, weight: .bold)
+    static let headlineCustom = Font.system(size: 27, weight: .regular)
+    static let titleCustom = Font.system(size: 17, weight: .semibold)
+    static let bodyCustom = Font.system(size: 17, weight: .regular)
+    static let captionCustom = Font.system(size: 14, weight: .regular)
 }
 
 //  MARK: 2. preview, edit, and save user data
-struct ProfileItem: View {
-    let title: String
-    let value: String
+struct DottedDivider: View {
+    var isHorizontal = false
     
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 5) {
-                Text(value)
-                    .font(.headlineCustom)
-                    .foregroundColor(.textPrimary)
-                Text(title)
-                    .font(.captionCustom)
-                    .foregroundColor(.textSecondary)
+        GeometryReader { geometry in
+            Path { path in
+                let start = CGPoint(x: isHorizontal ? 0 : geometry.size.width / 2,
+                                    y: isHorizontal ? geometry.size.height / 2 : 0)
+                let end = CGPoint(x: isHorizontal ? geometry.size.width : geometry.size.width / 2,
+                                  y: isHorizontal ? geometry.size.height / 2 : geometry.size.height)
+                path.move(to: start)
+                path.addLine(to: end)
             }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .foregroundColor(.accentColor)
+            .stroke(style: StrokeStyle(lineWidth: 1.5, dash: [1.5]))
+            .foregroundColor(.blue.opacity(0.2))
         }
-        .padding()
-        .background(Color.white)
-        .cornerRadius(10)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .frame(width: isHorizontal ? nil : 1, height: isHorizontal ? 1 : nil)
+    }
+}
+
+struct ProfileItemButton: View {
+    let title: String
+    let value: String
+    let itemType: ProfileEditView.ProfileItemType
+    @Binding var userData: UserData
+    var prefix: String?
+    
+    var body: some View {
+        NavigationLink(
+            destination: ProfileEditView(userData: $userData, itemType: itemType)
+                .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+        ) {
+            VStack(alignment: .center) {
+                if let prefix = prefix {
+                    Text(prefix)
+                        .font(Font.system(size: 22, weight: .regular))
+                        .foregroundColor(.textPrimary)
+                }
+                Text(value)
+                    .font(Font.system(size: 22, weight: .bold))
+                    .foregroundColor(.textAccent)
+                Text(title)
+                    .font(Font.system(size: 22, weight: .regular))
+                    .foregroundColor(.textPrimary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
@@ -62,7 +88,7 @@ struct ProfileEditView: View {
         switch itemType {
         case .burn: return "How easily do you get sunburned?"
         case .tan: return "How easily do you tan?"
-        case .foundation: return "What's your foundation shadee?"
+        case .foundation: return "What's your foundation shade?"
         case .spf: return "What's your sunscreen SPF?"
         }
     }
@@ -78,7 +104,7 @@ struct ProfileEditView: View {
         case .spf:
             return ["15", "30", "50", "100"]
         }
-     }
+    }
     
     var imageName: String {
         switch itemType {
@@ -91,37 +117,58 @@ struct ProfileEditView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            Text(title)
-                .font(.titleCustom)
-                .foregroundColor(.textPrimary)
-                .padding()
+            Spacer()
+            VStack {
+                Text(userData.name)
+                    .font(.largeTitleCustom)
+                    .foregroundColor(.textPrimary)
+                Text("skin profile")
+                    .font(.headlineCustom)
+                    .foregroundColor(.textPrimary)
+            }
             
             Image(imageName)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(height: 200)
+                .frame(width: 200, height: 200)
             
-            ForEach(options, id: \.self) { option in
-                Button(action: {
-                    updateUserData(option)
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        presentationMode.wrappedValue.dismiss()
-                    }
-                }) {
-                    Text(option)
-                        .font(.bodyCustom)
-                        .foregroundColor(.primary)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.white)
-                        .cornerRadius(10)
-                        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+            ZStack{
+                VStack {
+                    RoundedRectangle(cornerRadius: 25)
+                        .fill(Color.white)
+                        .shadow(color: Color.blue.opacity(0.25), radius: 5.7, x: 0, y: 5)
                 }
+                
+                VStack {
+                    Text(title)
+                        .font(.titleCustom)
+                        .foregroundColor(.textPrimary)
+                        .padding()
+                    
+                    ForEach(options, id: \.self) { option in
+                        Button(action: {
+                            updateUserData(option)
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                presentationMode.wrappedValue.dismiss()
+                            }
+                        }) {
+                            Text(option)
+                                .font(.bodyCustom)
+                                .foregroundColor(.primary)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.white)
+                                .cornerRadius(10)
+                        }
+                    }
+                }
+                .padding(20)
+                .background(Color.textPrimary.opacity(0.07))
+                .cornerRadius(25)
             }
+            .padding(40)
         }
-        .padding()
         .background(Color.backgroundPrimary)
-        .navigationBarTitle("Edit Profile", displayMode: .inline)
+        .navigationBarHidden(true)
     }
     
     func updateUserData(_ newValue: String) {
@@ -137,7 +184,7 @@ struct ProfileEditView: View {
             userData.calculateSkinType()
         case .spf:
             userData.spfUsed = Int(newValue) ?? 15
-                }
+        }
         SharedDataManager.shared.saveUserData(userData)
     }
 }
@@ -149,13 +196,13 @@ struct UVIndexView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("SPF \(UIDisplayFunctions().convertToSPFRecommendation()) is recommended for today/tomorrow's sun intensity")
+            Text("\(UIDisplayFunctions().convertToSPFRecommendation()) is recommended for today/tomorrow's sun intensity")
                 .font(.titleCustom)
             
             if let firstForecastDate = envData.uvForecasts.first?.0 ,
                let lastForecastTime = envData.uvForecasts.last?.0 {
                 
-                if Calendar.current.isDate(Date(), inSameDayAs: firstForecastDate) && Date() <= lastForecastTime {
+                if Calendar.current.isDate(Date(), inSameDayAs: firstForecastDate) && firstForecastDate <= Date() && Date() <= lastForecastTime {
                     UVChartFunctions.plotEnhancedChart(dataPoints: envData.uvForecasts, smoothnessFactor: smoothnessFactor, currentDate: Date())
                         .frame(height: 220)
                         .frame(maxWidth: .infinity)
@@ -177,7 +224,7 @@ struct UVIndexView: View {
 struct FloatingButton: View {
     @State private var pressAble: Bool = false
     var action: () -> Void
-
+    
     var body: some View {
         Button(action: {
             if pressAble {
