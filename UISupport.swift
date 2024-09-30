@@ -17,12 +17,227 @@ extension Color {
 extension Font {
     static let largeTitleCustom = Font.system(size: 52, weight: .bold)
     static let headlineCustom = Font.system(size: 27, weight: .regular)
-    static let titleCustom = Font.system(size: 17, weight: .semibold)
-    static let bodyCustom = Font.system(size: 17, weight: .regular)
+    static let titleCustom = Font.system(size: 14, weight: .semibold)
+    static let bodyCustom = Font.system(size: 14, weight: .regular)
     static let captionCustom = Font.system(size: 14, weight: .regular)
 }
 
 //  MARK: 2. preview, edit, and save user data
+struct midProfileElement: View {
+    @Binding var currentImageName: String
+    let geometry: GeometryProxy
+    
+    var body: some View {
+        Image(currentImageName)
+            .resizable()
+            .scaledToFit()
+            .frame(width: geometry.size.width * 0.8, height: geometry.size.height * 0.3)
+            .animation(.easeInOut, value: currentImageName)
+    }
+}
+
+struct botProfileElement: View {
+    @Binding var userData: UserData
+    @Binding var currentPage: Page
+    @Binding var currentImageName: String
+    let geometry: GeometryProxy
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                RoundedRectangle(cornerRadius: 25)
+                    .fill(Color.white)
+                    .shadow(color: Color.blue.opacity(0.25), radius: 5.7, x: 0, y: 5)
+                
+                RoundedRectangle(cornerRadius: 25)
+                    .fill(Color.textPrimary.opacity(0.07))
+                
+                VStack {
+                    if currentPage == .regular {
+                        HomeProfileView(userData: $userData, currentPage: $currentPage, currentImageName: $currentImageName)
+                    } else if currentPage == .spf {
+                        SPFInputView(userData: $userData, currentPage: $currentPage)
+                    } else {
+                        OptionSelectionView(userData: $userData, currentPage: $currentPage, currentImageName: $currentImageName)
+                    }
+                }
+                .padding()
+            }
+            .frame(width: geometry.size.width * 0.8)
+            .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
+        }
+        .frame(height: geometry.size.height * 0.3)
+        .animation(.easeInOut, value: currentPage)
+    }
+}
+
+struct HomeProfileView: View {
+    @Binding var userData: UserData
+    @Binding var currentPage: Page
+    @Binding var currentImageName: String
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                optionButton(for: .burn)
+                DottedDivider()
+                optionButton(for: .tan)
+            }
+            DottedDivider(isHorizontal: true)
+            HStack(spacing: 0) {
+                optionButton(for: .foundation)
+                DottedDivider()
+                optionButton(for: .spf)
+            }
+        }
+    }
+    
+    private func optionButton(for option: RegularOption) -> some View {
+        Button(action: {
+            selectRegularOption(option)
+        }) {
+            VStack(alignment: .center) {
+                if let prefix = option.prefix {
+                    Text(prefix)
+                        .font(.system(size: 17, weight: .regular))
+                        .foregroundColor(.textPrimary)
+                }
+                Text(getCurrentValue(for: option))
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(.textAccent)
+                Text(option.title)
+                    .font(.system(size: 17, weight: .regular))
+                    .foregroundColor(.textPrimary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding()
+        }
+    }
+    
+    private func selectRegularOption(_ option: RegularOption) {
+        switch option {
+        case .burn:
+            currentPage = .burn
+        case .tan:
+            currentPage = .tan
+        case .foundation:
+            currentPage = .foundation
+        case .spf:
+            currentPage = .spf
+        }
+        currentImageName = option.rawValue.lowercased()
+    }
+    
+    private func getCurrentValue(for option: RegularOption) -> String {
+        switch option {
+        case .burn:
+            return userData.burnLikeliness.rawValue.capitalized
+        case .tan:
+            return userData.tanLikeliness.rawValue.capitalized
+        case .foundation:
+            return userData.foundationShade.rawValue.capitalized
+        case .spf:
+            return "\(userData.spfUsed)"
+        }
+    }
+}
+
+struct SPFInputView: View {
+    @Binding var userData: UserData
+    @Binding var currentPage: Page
+    
+    var body: some View {
+        HStack {
+            Text("SPF:")
+            TextField("Enter SPF", value: $userData.spfUsed, formatter: NumberFormatter())
+                .keyboardType(.numberPad)
+            Button("Done") {
+                SharedDataManager.shared.saveUserData(userData)
+                currentPage = .regular
+            }
+        }
+        .padding()
+    }
+}
+
+struct OptionSelectionView: View {
+    @Binding var userData: UserData
+    @Binding var currentPage: Page
+    @Binding var currentImageName: String
+    
+    var body: some View {
+        VStack {
+            ForEach(1...5, id: \.self) { option in
+                Button(action: {
+                    selectOption(option)
+                }) {
+                    Text(getOptionText(for: option))
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                }
+            }
+        }
+    }
+    
+    private func selectOption(_ option: Int) {
+        switch currentPage {
+        case .burn:
+            userData.burnLikeliness = BurnLikeliness.allCases[option - 1]
+        case .tan:
+            userData.tanLikeliness = TanLikeliness.allCases[option - 1]
+        case .foundation:
+            userData.foundationShade = FoundationShade.allCases[option - 1]
+        default:
+            break
+        }
+        userData.calculateSkinType()
+        SharedDataManager.shared.saveUserData(userData)
+        currentPage = .regular
+        currentImageName = "regular"
+    }
+    
+    private func getOptionText(for option: Int) -> String {
+        switch currentPage {
+        case .burn:
+            return BurnLikeliness.allCases[option - 1].rawValue
+        case .tan:
+            return TanLikeliness.allCases[option - 1].rawValue
+        case .foundation:
+            return FoundationShade.allCases[option - 1].rawValue
+        default:
+            return "Option \(option)"
+        }
+    }
+}
+
+enum Page {
+    case regular, burn, tan, foundation, spf
+}
+
+enum RegularOption: String, CaseIterable {
+    case burn = "burn"
+    case tan = "tan"
+    case foundation = "foundation"
+    case spf = "spf"
+    
+    var prefix: String? {
+        switch self {
+        case .burn:
+            return nil
+        case .tan:
+            return nil
+        case .foundation:
+            return "uses"
+        case .spf:
+            return "uses"
+        }
+    }
+    
+    var title: String {
+        return self.rawValue
+    }
+}
+
 struct DottedDivider: View {
     var isHorizontal = false
     
@@ -43,152 +258,6 @@ struct DottedDivider: View {
     }
 }
 
-struct ProfileItemButton: View {
-    let title: String
-    let value: String
-    let itemType: ProfileEditView.ProfileItemType
-    @Binding var userData: UserData
-    var prefix: String?
-    
-    var body: some View {
-        NavigationLink(
-            destination: ProfileEditView(userData: $userData, itemType: itemType)
-                .transition(.opacity)
-        ) {
-            VStack(alignment: .center) {
-                if let prefix = prefix {
-                    Text(prefix)
-                        .font(Font.system(size: 22, weight: .regular))
-                        .foregroundColor(.textPrimary)
-                }
-                Text(value)
-                    .font(Font.system(size: 22, weight: .bold))
-                    .foregroundColor(.textAccent)
-                Text(title)
-                    .font(Font.system(size: 22, weight: .regular))
-                    .foregroundColor(.textPrimary)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
-struct ProfileEditView: View {
-    @Binding var userData: UserData
-    @Environment(\.presentationMode) var presentationMode
-    let itemType: ProfileItemType
-    
-    enum ProfileItemType {
-        case burn, tan, foundation, spf
-    }
-    
-    var title: String {
-        switch itemType {
-        case .burn: return "How easily do you get sunburned?"
-        case .tan: return "How easily do you tan?"
-        case .foundation: return "What's your foundation shade?"
-        case .spf: return "What's your sunscreen SPF?"
-        }
-    }
-    
-    var options: [String] {
-        switch itemType {
-        case .burn:
-            return ["Always", "Easily", "Sometimes", "Rarely", "Never"]
-        case .tan:
-            return ["Never", "Rarely", "Sometimes", "Easily", "Always"]
-        case .foundation:
-            return ["Light", "Medium", "Tan", "Dark", "Deep"]
-        case .spf:
-            return ["15", "30", "50", "100"]
-        }
-    }
-    
-    var imageName: String {
-        switch itemType {
-        case .burn: return "burnt"
-        case .tan: return "tanned"
-        case .foundation: return "foundation"
-        case .spf: return "spf"
-        }
-    }
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            Spacer()
-            VStack {
-                Text(userData.name)
-                    .font(.largeTitleCustom)
-                    .foregroundColor(.textPrimary)
-                Text("skin profile")
-                    .font(.headlineCustom)
-                    .foregroundColor(.textPrimary)
-            }
-            
-            Image(imageName)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 200, height: 200)
-            
-            ZStack{
-                VStack(spacing: 0) {
-                    RoundedRectangle(cornerRadius: 25)
-                        .fill(Color.white)
-                        .shadow(color: Color.blue.opacity(0.25), radius: 5.7, x: 0, y: 5)
-                }
-                
-                VStack(spacing: 0) {
-                    Text(title)
-                        .font(.titleCustom)
-                        .foregroundColor(.textPrimary)
-                        .padding()
-                    
-                    ForEach(options, id: \.self) { option in
-                        Button(action: {
-                            updateUserData(option)
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                presentationMode.wrappedValue.dismiss()
-                            }
-                        }) {
-                            Text(option)
-                                .font(.bodyCustom)
-                                .foregroundColor(.primary)
-                                .frame(maxWidth: .infinity)
-                                .background(Color.white)
-                                .cornerRadius(10)
-                        }
-                    }
-                }
-                .padding(20)
-                .background(Color.textPrimary.opacity(0.07))
-                .cornerRadius(25)
-            }
-            .padding(40)
-        }
-        .background(Color.backgroundPrimary)
-        .navigationBarHidden(true)
-    }
-    
-    func updateUserData(_ newValue: String) {
-        switch itemType {
-        case .burn:
-            userData.burnLikeliness = BurnLikeliness(rawValue: newValue.lowercased()) ?? .sometimes
-            userData.calculateSkinType()
-        case .tan:
-            userData.tanLikeliness = TanLikeliness(rawValue: newValue.lowercased()) ?? .sometimes
-            userData.calculateSkinType()
-        case .foundation:
-            userData.foundationShade = FoundationShade(rawValue: newValue.lowercased()) ?? .medium
-            userData.calculateSkinType()
-        case .spf:
-            userData.spfUsed = Int(newValue) ?? 15
-        }
-        SharedDataManager.shared.saveUserData(userData)
-    }
-}
-
 //  MARK: 3. for plotting UV index
 struct UVIndexView: View {
     let envData = SharedDataManager.shared.getEnvironmentData()
@@ -197,7 +266,8 @@ struct UVIndexView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("\(UIDisplayFunctions().convertToSPFRecommendation()) is recommended for today/tomorrow's sun intensity")
-                .font(.titleCustom)
+                .font(.bodyCustom)
+                .foregroundColor(.textPrimary)
             
             if let firstForecastDate = envData.uvForecasts.first?.0 ,
                let lastForecastTime = envData.uvForecasts.last?.0 {
@@ -214,9 +284,10 @@ struct UVIndexView: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(radius: 5)
+        .background(Color.textPrimary.opacity(0.07))
+        .cornerRadius(25)
+        //  MARK: *** bug *** shadow is for text, not for the background
+        .shadow(color: Color.blue.opacity(0.25), radius: 5.7, x: 0, y: 5)
     }
 }
 

@@ -6,15 +6,15 @@
 import Foundation
 
 //  MARK: 1. CustomizedDataTypes.swift
-enum FoundationShade: String, Codable{
+enum FoundationShade: String, Codable, CaseIterable{
     case light, medium, tan, dark, deep
 }
 
-enum BurnLikeliness: String, Codable{
+enum BurnLikeliness: String, Codable, CaseIterable{
     case always, easily, sometimes, rarely, never
 }
 
-enum TanLikeliness: String, Codable{
+enum TanLikeliness: String, Codable, CaseIterable{
     case never, rarely, sometimes, easily, always
 }
 

@@ -7,6 +7,7 @@
 import Foundation
 import BackgroundTasks
 import Combine
+import UIKit
 
 class StateManager {
     static let shared = StateManager()
@@ -45,6 +46,7 @@ class StateManager {
             let forecastsDate = SharedDataManager.shared.getEnvironmentData().uvForecasts.first?.0
             
             if isFirstPressToday() {    // first press today
+                //  MARK: *** bug *** did not update location first
                 locationService.getCurrentLocation {_ in}   // update location
                 let locData = SharedDataManager.shared.getEnvironmentData()
                 let lat = locData.latitude

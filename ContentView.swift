@@ -9,14 +9,18 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    
     @StateObject private var timeZoneObserver = TimeZoneObserver()
     @State private var buttonPosition = CGPoint(x: UIScreen.main.bounds.width - 100, y: 300)
     
     @ObservedObject private var animationManager = AnimationManager.shared
     @State private var isAnimatingWiggle = true
     @State private var isAnimatingReload = true
+    
+    //  for alt UI
+    @State private var currentPage: Page = .regular
+    @State private var currentImageName: String = "regular"
+    @State private var keyboardHeight: CGFloat = 0
+    //  end alt UI
     
     //  begin UI use
     @State private var userData: UserData
@@ -36,13 +40,20 @@ struct ContentView: View {
                     // top section - header info
                     VStack(spacing: 10) {
                         Text("next app time \(UIDisplayFunctions().displayNextTime())")
+                            .font(.bodyCustom)
+                            .foregroundColor(.textPrimary)
                         Text("current uv \(SharedDataManager.shared.getEnvironmentData().uv)")
+                            .font(.bodyCustom)
+                            .foregroundColor(.textPrimary)
                         Text("current city \(SharedDataManager.shared.getEnvironmentData().cityName)")
+                            .font(.bodyCustom)
+                            .foregroundColor(.textPrimary)
                     }
                     .padding()
-                    .background(Color.backgroundPrimary)
-                    .cornerRadius(10)
-                    .shadow(radius: 5)
+                    .background(Color.textPrimary.opacity(0.07))
+                    .cornerRadius(25)
+                    //  MARK: *** bug *** shadow is for text, not for the background
+                    .shadow(color: Color.blue.opacity(0.25), radius: 5.7, x: 0, y: 5)
                     
                     // middle section
                     switch animationManager.currentView {
@@ -68,7 +79,9 @@ struct ContentView: View {
                     UVIndexView()
                 }
                 .padding()
-            }.tabItem {
+            }
+            .background(Color.backgroundPrimary)
+            .tabItem {
                 Image(systemName: "house")
                 Text("Main page")
             }.onAppear {
@@ -99,7 +112,7 @@ struct ContentView: View {
                     let envData = SharedDataManager.shared.getEnvironmentData()
                     let useData = SharedDataManager.shared.getUserData()
                     
-                    Text("skin type \(useData.skinType), using SPF \(useData.spfUsed);")
+                    Text("\(useData.name) with skin type \(useData.skinType), using SPF \(useData.spfUsed);")
                     Text("located lat \(envData.latitude), long \(envData.longitude)")
                     Text("\nsunMax at \(envData.sunmaxTime)")
                     Text("sunSet at \(envData.sunsetTime)")
@@ -175,81 +188,54 @@ struct ContentView: View {
             }
             
             //  MARK: 3rd designed user profile
-            NavigationView {
+            GeometryReader { geometry in
                 VStack(spacing: 20) {
-                    //  top section: name
+                    //  MARK: top section - name input
                     Spacer()
                     VStack {
-                        if isEditingName {
-                            TextField("Name", text: $userData.name)
-                                .font(.largeTitleCustom)
-                                .foregroundColor(.textPrimary)
-                                .multilineTextAlignment(.center)
-                                .onSubmit {
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        isEditingName = false
+                        ZStack(alignment: .leading) {
+                            if isEditingName {
+                                TextField("Name", text: $userData.name)
+                                    .font(.largeTitleCustom)
+                                    .foregroundColor(.textPrimary)
+                                    .multilineTextAlignment(.center)
+                                    .onSubmit {
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            isEditingName = false
+                                        }
+                                        SharedDataManager.shared.saveUserData(userData)
                                     }
-                                    SharedDataManager.shared.saveUserData(userData)
-                                }
-                                .transition(.opacity)
-                        } else {
-                            Text(userData.name)
-                                .font(.largeTitleCustom)
-                                .foregroundColor(.textPrimary)
-                                .onTapGesture {
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        isEditingName = true
+                                    .transition(.opacity)
+                            } else {
+                                Text(userData.name.isEmpty ? "Enter Name": userData.name)
+                                    .font(.largeTitleCustom)
+                                    .foregroundColor(userData.name.isEmpty ? .gray: .textPrimary)
+                                    .onTapGesture {
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            isEditingName = true
+                                        }
                                     }
-                                }
-                                .transition(.opacity)
+                                    .transition(.opacity)
+                            }
                         }
+                        .frame(width: geometry.size.width * 0.8, height: 60)
+                        .background(Color.backgroundPrimary)
+                        
                         Text("skin profile")
                             .font(.headlineCustom)
                             .foregroundColor(.textPrimary)
                     }
                     
-                    //  middle section: background image
-                    Image("regular")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 200, height: 200)
+                    //  MARK: middle section - background image
                     
-                    //  bottom section: info field
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 25)
-                            .fill(Color.white)
-                            .shadow(color: Color.blue.opacity(0.25), radius: 5.7, x: 0, y: 5)
-                        
-                        VStack {
-                            HStack {
-                                ProfileItemButton(title: "burns", value: userData.burnLikeliness.rawValue.capitalized, itemType: .burn, userData: $userData)
-                                    .padding([.top, .leading], 5)
-                                DottedDivider()
-                                ProfileItemButton(title: "tans", value: userData.tanLikeliness.rawValue.capitalized, itemType: .tan, userData: $userData)
-                                    .padding([.top, .trailing], 5)
-                            }
-                            DottedDivider(isHorizontal: true)
-                            HStack {
-                                ProfileItemButton(title: "foundation", value: userData.foundationShade.rawValue.capitalized, itemType: .foundation, userData: $userData, prefix: "uses")
-                                    .padding([.bottom, .leading], 5)
-                                DottedDivider()
-                                ProfileItemButton(title: "SPF", value: String(userData.spfUsed), itemType: .spf, userData: $userData, prefix: "uses")
-                                    .padding([.bottom, .trailing], 5)
-                            }
-                        }
-                        .padding(20)
-                        .background(Color.textPrimary.opacity(0.07))
-                        .cornerRadius(25)
-                    }
-                    .padding(40)
-                    //  MARK: opacity transition of the lower card
-                    .transition(.opacity)
+                    midProfileElement(currentImageName: $currentImageName, geometry: geometry)
+                    
+                    //  MARK: bottom section - info field
+                    botProfileElement(userData: $userData, currentPage: $currentPage, currentImageName: $currentImageName, geometry: geometry)
+                    Spacer()
                 }
                 .background(Color.backgroundPrimary)
                 .navigationBarHidden(true)
-                .onAppear {
-                    userData.calculateSkinType()
-                }
             }.tabItem {
                 Image(systemName: "bubbles.and.sparkles")
                 Text("weee")

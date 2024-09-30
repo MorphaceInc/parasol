@@ -116,6 +116,7 @@ struct UVChartFunctions {
                 if i < stepCount {
                     Text(formatter.string(from: NSNumber(value: maxUV * Double(stepCount - i) / Double(stepCount))) ?? "")
                         .font(.captionCustom)
+                        .foregroundColor(.textPrimary)
                         .frame(width: 30, alignment: .trailing)
                 }
             }
@@ -135,7 +136,6 @@ struct UVChartFunctions {
             let targetDate = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: dataPoints[0].0)!
             let index = dataPoints.indices.min(by: { abs(calendar.dateComponents([.minute], from: dataPoints[$0].0, to: targetDate).minute ?? 0) < abs(calendar.dateComponents([.minute], from: dataPoints[$1].0, to: targetDate).minute ?? 0) }) ?? 0
             let position = CGFloat(index) / CGFloat(dataPoints.count - 1)
-            let result = position * geometry.size.width
             return position * geometry.size.width
         }
         
@@ -145,6 +145,7 @@ struct UVChartFunctions {
             ForEach(Array(zip(markedHours, labelPositions)), id: \.0) { hour, position in
                 Text(dateFormatter.string(from: calendar.date(bySettingHour: hour, minute: 0, second: 0, of: dataPoints[0].0)!).lowercased())
                     .font(.captionCustom)
+                    .foregroundColor(.textPrimary)
                     .frame(width: 40)
                     .offset(x: position - 20)
             }
