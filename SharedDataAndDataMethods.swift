@@ -15,7 +15,7 @@ enum BurnLikeliness: String, Codable, CaseIterable{
 }
 
 enum TanLikeliness: String, Codable, CaseIterable{
-    case never, rarely, sometimes, easily, always
+    case always, easily, sometimes, rarely, never
 }
 
 typealias UVForecast = [(date: Date, uvIndex: Double)]

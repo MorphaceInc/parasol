@@ -190,9 +190,9 @@ struct ContentView: View {
             //  MARK: 3rd designed user profile
             GeometryReader { geometry in
                 VStack(spacing: 20) {
-                    //  MARK: top section - name input
-                    Spacer()
                     VStack {
+                        Spacer()
+                            .frame(height: geometry.size.height * 0.05)
                         ZStack(alignment: .leading) {
                             if isEditingName {
                                 TextField("Name", text: $userData.name)
@@ -218,7 +218,7 @@ struct ContentView: View {
                                     .transition(.opacity)
                             }
                         }
-                        .frame(width: geometry.size.width * 0.8, height: 60)
+                        .frame(width: geometry.size.width * 0.8, height: geometry.size.height * 0.1)
                         .background(Color.backgroundPrimary)
                         
                         Text("skin profile")
@@ -226,13 +226,10 @@ struct ContentView: View {
                             .foregroundColor(.textPrimary)
                     }
                     
-                    //  MARK: middle section - background image
-                    
                     midProfileElement(currentImageName: $currentImageName, geometry: geometry)
                     
-                    //  MARK: bottom section - info field
                     botProfileElement(userData: $userData, currentPage: $currentPage, currentImageName: $currentImageName, geometry: geometry)
-                    Spacer()
+                    
                 }
                 .background(Color.backgroundPrimary)
                 .navigationBarHidden(true)

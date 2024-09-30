@@ -10,16 +10,36 @@ import SwiftData
 //  MARK: 1. colors and fonts
 extension Color {
     static let backgroundPrimary = Color(red: 1, green: 1, blue: 1)
-    static let textAccent = Color.black
-    static let textPrimary = Color(red: 0.4, green: 0.6, blue: 0.8)
+    static let textAccent = Color(red: 0.180, green: 0.423, blue: 0.553)
+    static let textPrimary = Color(red: 0.455, green: 0.701, blue: 0.969)
 }
 
 extension Font {
     static let largeTitleCustom = Font.system(size: 52, weight: .bold)
-    static let headlineCustom = Font.system(size: 27, weight: .regular)
+    static let headlineCustom = Font.system(size: 18, weight: .regular)
     static let titleCustom = Font.system(size: 14, weight: .semibold)
     static let bodyCustom = Font.system(size: 14, weight: .regular)
     static let captionCustom = Font.system(size: 14, weight: .regular)
+}
+
+struct DottedDivider: View {
+    var isHorizontal = false
+    
+    var body: some View {
+        GeometryReader { geometry in
+            Path { path in
+                let start = CGPoint(x: isHorizontal ? 0 : geometry.size.width / 2,
+                                    y: isHorizontal ? geometry.size.height / 2 : 0)
+                let end = CGPoint(x: isHorizontal ? geometry.size.width : geometry.size.width / 2,
+                                  y: isHorizontal ? geometry.size.height / 2 : geometry.size.height)
+                path.move(to: start)
+                path.addLine(to: end)
+            }
+            .stroke(style: StrokeStyle(lineWidth: 1.5, dash: [1.5]))
+            .foregroundColor(.textPrimary.opacity(0.2))
+        }
+        .frame(width: isHorizontal ? nil : 1, height: isHorizontal ? 1 : nil)
+    }
 }
 
 //  MARK: 2. preview, edit, and save user data
@@ -31,7 +51,7 @@ struct midProfileElement: View {
         Image(currentImageName)
             .resizable()
             .scaledToFit()
-            .frame(width: geometry.size.width * 0.8, height: geometry.size.height * 0.3)
+            .frame(width: geometry.size.width * 0.8, height: geometry.size.height * 0.35)
             .animation(.easeInOut, value: currentImageName)
     }
 }
@@ -47,10 +67,10 @@ struct botProfileElement: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 25)
                     .fill(Color.white)
-                    .shadow(color: Color.blue.opacity(0.25), radius: 5.7, x: 0, y: 5)
+                    .shadow(color: Color.blue.opacity(0.15), radius: 5.7, x: 0, y: 5)
                 
                 RoundedRectangle(cornerRadius: 25)
-                    .fill(Color.textPrimary.opacity(0.07))
+                    .fill(Color.textPrimary.opacity(0.05))
                 
                 VStack {
                     if currentPage == .regular {
@@ -63,10 +83,10 @@ struct botProfileElement: View {
                 }
                 .padding()
             }
-            .frame(width: geometry.size.width * 0.8)
+            .frame(width: geometry.size.width * 0.75)
             .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
         }
-        .frame(height: geometry.size.height * 0.3)
+        .frame(height: geometry.size.height * 0.35)
         .animation(.easeInOut, value: currentPage)
     }
 }
@@ -96,21 +116,20 @@ struct HomeProfileView: View {
         Button(action: {
             selectRegularOption(option)
         }) {
-            VStack(alignment: .center) {
+            VStack(alignment: .center, spacing: 2) {
                 if let prefix = option.prefix {
                     Text(prefix)
-                        .font(.system(size: 17, weight: .regular))
+                        .font(.system(size: 18, weight: .regular))
                         .foregroundColor(.textPrimary)
                 }
                 Text(getCurrentValue(for: option))
-                    .font(.system(size: 17, weight: .bold))
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.textAccent)
                 Text(option.title)
-                    .font(.system(size: 17, weight: .regular))
+                    .font(.system(size: 18, weight: .regular))
                     .foregroundColor(.textPrimary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding()
         }
     }
     
@@ -142,41 +161,31 @@ struct HomeProfileView: View {
     }
 }
 
-struct SPFInputView: View {
-    @Binding var userData: UserData
-    @Binding var currentPage: Page
-    
-    var body: some View {
-        HStack {
-            Text("SPF:")
-            TextField("Enter SPF", value: $userData.spfUsed, formatter: NumberFormatter())
-                .keyboardType(.numberPad)
-            Button("Done") {
-                SharedDataManager.shared.saveUserData(userData)
-                currentPage = .regular
-            }
-        }
-        .padding()
-    }
-}
-
 struct OptionSelectionView: View {
     @Binding var userData: UserData
     @Binding var currentPage: Page
     @Binding var currentImageName: String
     
     var body: some View {
-        VStack {
+        VStack(spacing: 5) {
+            Text(getPromptText())
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(.textAccent)
+                .multilineTextAlignment(.center)
+                .padding(.bottom, 10)
+            
             ForEach(1...5, id: \.self) { option in
                 Button(action: {
                     selectOption(option)
                 }) {
                     Text(getOptionText(for: option))
-                        .padding()
+                        .font(.system(size: 18, weight: .regular))
+                        .foregroundColor(.textPrimary)
                         .frame(maxWidth: .infinity)
                 }
             }
         }
+        .padding()
     }
     
     private func selectOption(_ option: Int) {
@@ -196,6 +205,21 @@ struct OptionSelectionView: View {
         currentImageName = "regular"
     }
     
+    private func getPromptText() -> String {
+        switch currentPage {
+        case .burn:
+            return "How easily do you burn?"
+        case .tan:
+            return "How easily do you tan?"
+        case .foundation:
+            return "What shade is your skin?"
+        case .spf:
+            return "What SPF do you use?"
+        default:
+            return ""
+        }
+    }
+    
     private func getOptionText(for option: Int) -> String {
         switch currentPage {
         case .burn:
@@ -210,52 +234,51 @@ struct OptionSelectionView: View {
     }
 }
 
+struct SPFInputView: View {
+    @Binding var userData: UserData
+    @Binding var currentPage: Page
+    
+    var body: some View {
+        VStack {
+            Text("What's your current sunscreen SPF?")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(.textAccent)
+                .multilineTextAlignment(.center)
+            HStack {
+                Text("SPF: ")
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundColor(.textPrimary)
+                TextField("Enter SPF", value: $userData.spfUsed, formatter: NumberFormatter())
+                    .keyboardType(.numberPad)
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundColor(.textPrimary)
+                Button("Done") {
+                    SharedDataManager.shared.saveUserData(userData)
+                    currentPage = .regular
+                }
+                .font(.system(size: 18, weight: .regular))
+                .foregroundColor(.textPrimary)
+            }
+            .padding()
+        }
+    }
+}
+
 enum Page {
     case regular, burn, tan, foundation, spf
 }
 
 enum RegularOption: String, CaseIterable {
-    case burn = "burn"
-    case tan = "tan"
-    case foundation = "foundation"
-    case spf = "spf"
+    case burn, tan, foundation, spf
     
     var prefix: String? {
         switch self {
-        case .burn:
-            return nil
-        case .tan:
-            return nil
-        case .foundation:
-            return "uses"
-        case .spf:
-            return "uses"
+        case .foundation, .spf: return "uses"
+        default: return nil
         }
     }
     
-    var title: String {
-        return self.rawValue
-    }
-}
-
-struct DottedDivider: View {
-    var isHorizontal = false
-    
-    var body: some View {
-        GeometryReader { geometry in
-            Path { path in
-                let start = CGPoint(x: isHorizontal ? 0 : geometry.size.width / 2,
-                                    y: isHorizontal ? geometry.size.height / 2 : 0)
-                let end = CGPoint(x: isHorizontal ? geometry.size.width : geometry.size.width / 2,
-                                  y: isHorizontal ? geometry.size.height / 2 : geometry.size.height)
-                path.move(to: start)
-                path.addLine(to: end)
-            }
-            .stroke(style: StrokeStyle(lineWidth: 1.5, dash: [1.5]))
-            .foregroundColor(.blue.opacity(0.2))
-        }
-        .frame(width: isHorizontal ? nil : 1, height: isHorizontal ? 1 : nil)
-    }
+    var title: String { rawValue }
 }
 
 //  MARK: 3. for plotting UV index
