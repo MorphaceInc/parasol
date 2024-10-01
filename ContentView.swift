@@ -16,13 +16,9 @@ struct ContentView: View {
     @State private var isAnimatingWiggle = true
     @State private var isAnimatingReload = true
     
-    //  for alt UI
+    //  begin UI use
     @State private var currentPage: Page = .regular
     @State private var currentImageName: String = "regular"
-    @State private var keyboardHeight: CGFloat = 0
-    //  end alt UI
-    
-    //  begin UI use
     @State private var userData: UserData
     @State private var isEditingName = false
     init() {
@@ -34,56 +30,54 @@ struct ContentView: View {
     
     var body: some View {
         TabView {
-            //  MARK: 1st tab - Home page
-            ScrollView {
-                VStack(spacing: 20) {
-                    // top section - header info
-                    VStack(spacing: 10) {
-                        Text("next app time \(UIDisplayFunctions().displayNextTime())")
-                            .font(.bodyCustom)
-                            .foregroundColor(.textPrimary)
-                        Text("current uv \(SharedDataManager.shared.getEnvironmentData().uv)")
-                            .font(.bodyCustom)
-                            .foregroundColor(.textPrimary)
-                        Text("current city \(SharedDataManager.shared.getEnvironmentData().cityName)")
-                            .font(.bodyCustom)
-                            .foregroundColor(.textPrimary)
-                    }
-                    .padding()
-                    .background(Color.textPrimary.opacity(0.07))
-                    .cornerRadius(25)
-                    //  MARK: *** bug *** shadow is for text, not for the background
-                    .shadow(color: Color.blue.opacity(0.25), radius: 5.7, x: 0, y: 5)
-                    
-                    // middle section
-                    switch animationManager.currentView {
-                    case .reload:
-                        AnimatedShakeView(gifName: "Reload", isAnimating: .constant(true))
-                            .frame(height: 300)
-                    case .wiggle:
-                        AnimatedShakeView(gifName: "Wiggle", isAnimating: .constant(true))
-                            .frame(height: 300)
-                            .onTapGesture {
-                                Task {
-                                    print("case .wiggle .onTapGesture triggered handleButtonPressWithAnimation")
-                                    await animationManager.handleButtonPressWithAnimation()
-                                    print("case .wiggle .onTapGesture triggered updateButtonState")
-                                }
+            //  MARK: uv dashboard page
+            GeometryReader { outerGeometry in
+                ZStack(alignment: .top) {
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            Spacer()
+                            // middle scrolling section - animation bottle
+                            switch animationManager.currentView {
+                            case .reload:
+                                AnimatedShakeView(gifName: "Reload", isAnimating: .constant(true))
+                                    .frame(height: outerGeometry.size.height * 0.4)
+                            case .wiggle:
+                                AnimatedShakeView(gifName: "Wiggle", isAnimating: .constant(true))
+                                    .frame(height: outerGeometry.size.height * 0.4)
+                                    .onTapGesture {
+                                        Task {
+                                            print("case .wiggle .onTapGesture triggered handleButtonPressWithAnimation")
+                                            await animationManager.handleButtonPressWithAnimation()
+                                            print("case .wiggle .onTapGesture triggered updateButtonState")
+                                        }
+                                    }
+                            case .drain:
+                                SunscreenDepletionView()
+                                    .frame(height: outerGeometry.size.height * 0.4)
                             }
-                    case .drain:
-                        SunscreenDepletionView()
-                            .frame(height: 300)
+                            
+                            // bottom scrolling section - UV plot
+                            UVIndexView()
+                                .frame(height: outerGeometry.size.height * 0.7, alignment: .center)
+                        }
+                        .padding(.top, outerGeometry.size.height * 0.4)
                     }
                     
-                    // bottom section - UV plot
-                    UVIndexView()
+                    //  Top panel
+                    GeometryReader { geometry in
+                        VStack(spacing: 0) {
+                            dashboardFloatElement()
+                                .frame(width: geometry.size.width * 0.75, height: geometry.size.height * 0.25)
+                            Spacer()
+                        }
+                        .frame(width: geometry.size.width, height: geometry.size.height, alignment: .center)
+                        .offset(y: geometry.frame(in: .global).minY > 0 ? geometry.frame(in: .global).minY : 0)
+                    }
                 }
-                .padding()
             }
             .background(Color.backgroundPrimary)
             .tabItem {
-                Image(systemName: "house")
-                Text("Main page")
+                Image(systemName: "sun.horizon.fill")
             }.onAppear {
                 animationManager.updateCurrentView()
                 if isFirstLaunch() {
@@ -106,7 +100,57 @@ struct ContentView: View {
                 }.disabled(AnimationManager.shared.isLoading)
             )
             
-            //  MARK: 2nd tab - debugging values
+            //  MARK: user profile page
+            GeometryReader { geometry in
+                VStack(spacing: 20) {
+                    VStack {
+                        Spacer()
+                            .frame(height: geometry.size.height * 0.05)
+                        ZStack(alignment: .leading) {
+                            if isEditingName {
+                                TextField("Name", text: $userData.name)
+                                    .font(.largeTitleCustom)
+                                    .foregroundColor(.textPrimary)
+                                    .multilineTextAlignment(.center)
+                                    .onSubmit {
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            isEditingName = false
+                                        }
+                                        SharedDataManager.shared.saveUserData(userData)
+                                    }
+                                    .transition(.opacity)
+                            } else {
+                                Text(userData.name.isEmpty ? "Enter Name": userData.name)
+                                    .font(.largeTitleCustom)
+                                    .foregroundColor(userData.name.isEmpty ? .gray: .textPrimary)
+                                    .onTapGesture {
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            isEditingName = true
+                                        }
+                                    }
+                                    .transition(.opacity)
+                            }
+                        }
+                        .frame(width: geometry.size.width * 0.8, height: geometry.size.height * 0.1)
+                        .background(Color.backgroundPrimary)
+                        
+                        Text("skin profile")
+                            .font(.headlineCustom)
+                            .foregroundColor(.textPrimary)
+                    }
+                    
+                    midProfileElement(currentImageName: $currentImageName, geometry: geometry)
+                    
+                    botProfileElement(userData: $userData, currentPage: $currentPage, currentImageName: $currentImageName, geometry: geometry)
+                    
+                }
+                .background(Color.backgroundPrimary)
+                .navigationBarHidden(true)
+            }.tabItem {
+                Image(systemName: "person.fill")
+            }
+            
+            //  MARK: debugging values
             ScrollView {
                 VStack {
                     let envData = SharedDataManager.shared.getEnvironmentData()
@@ -184,60 +228,9 @@ struct ContentView: View {
                 }
             }.tabItem {
                 Image(systemName: "wrench.and.screwdriver.fill")
-                Text("Display Values")
-            }
-            
-            //  MARK: 3rd designed user profile
-            GeometryReader { geometry in
-                VStack(spacing: 20) {
-                    VStack {
-                        Spacer()
-                            .frame(height: geometry.size.height * 0.05)
-                        ZStack(alignment: .leading) {
-                            if isEditingName {
-                                TextField("Name", text: $userData.name)
-                                    .font(.largeTitleCustom)
-                                    .foregroundColor(.textPrimary)
-                                    .multilineTextAlignment(.center)
-                                    .onSubmit {
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            isEditingName = false
-                                        }
-                                        SharedDataManager.shared.saveUserData(userData)
-                                    }
-                                    .transition(.opacity)
-                            } else {
-                                Text(userData.name.isEmpty ? "Enter Name": userData.name)
-                                    .font(.largeTitleCustom)
-                                    .foregroundColor(userData.name.isEmpty ? .gray: .textPrimary)
-                                    .onTapGesture {
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            isEditingName = true
-                                        }
-                                    }
-                                    .transition(.opacity)
-                            }
-                        }
-                        .frame(width: geometry.size.width * 0.8, height: geometry.size.height * 0.1)
-                        .background(Color.backgroundPrimary)
-                        
-                        Text("skin profile")
-                            .font(.headlineCustom)
-                            .foregroundColor(.textPrimary)
-                    }
-                    
-                    midProfileElement(currentImageName: $currentImageName, geometry: geometry)
-                    
-                    botProfileElement(userData: $userData, currentPage: $currentPage, currentImageName: $currentImageName, geometry: geometry)
-                    
-                }
-                .background(Color.backgroundPrimary)
-                .navigationBarHidden(true)
-            }.tabItem {
-                Image(systemName: "bubbles.and.sparkles")
-                Text("weee")
             }
         }
+        .customTabViewAppearance()
     }
     
     private func isFirstLaunch() -> Bool {

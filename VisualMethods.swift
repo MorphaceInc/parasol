@@ -188,7 +188,7 @@ struct UIDisplayFunctions {
         case 5:
             return "SPF 50+ and SPF lip balm"
         case 6:
-            return "Sun Protective Clothing, stay indoors"
+            return "sun protective clothing, stay indoors"
         default:
             return "SPF 30 as precaution"
         }
@@ -204,11 +204,10 @@ struct UIDisplayFunctions {
                 dateFormatter.timeStyle = .short
                 return dateFormatter.string(from: envData.nextTime)
             } else {
-                return "good until sunset"
+                return "tomorrow"
             }
         } else {
-            //  MARK: ***need to implement re-fetch nextTime functions
-            return "next time not at today"
+            return "tomorrow"
         }
     }
 }

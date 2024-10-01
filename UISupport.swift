@@ -1,8 +1,7 @@
 //  Bookkeeping for rendering the view of user profile page
 //      1. Color palette
-//      2. For preview, edit, saving user profile data with expendable cards
-//      3. For plotting UV intensity
-//      4. For floating button
+//      2. For preview, edit, saving user profile data with cards
+//      3. For elements on the UV dashboard
 
 import SwiftUI
 import SwiftData
@@ -42,6 +41,37 @@ struct DottedDivider: View {
     }
 }
 
+struct CustomTabViewAppearance: ViewModifier {
+    init() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = .white
+        appearance.shadowColor = .clear
+        
+        let selectedColor = UIColor(red: 0.180, green: 0.423, blue: 0.553, alpha: 1.0)
+        let unselectedColor = UIColor(red: 0.455, green: 0.701, blue: 0.969, alpha: 1.0)
+        
+        appearance.stackedLayoutAppearance.selected.iconColor = selectedColor
+        appearance.stackedLayoutAppearance.normal.iconColor = unselectedColor
+        
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
+        
+        UITabBar.appearance().tintColor = selectedColor
+        UITabBar.appearance().unselectedItemTintColor = unselectedColor
+    }
+    
+    func body(content: Content) -> some View {
+        content
+    }
+}
+
+extension View {
+    func customTabViewAppearance() -> some View {
+        self.modifier(CustomTabViewAppearance())
+    }
+}
+
 //  MARK: 2. preview, edit, and save user data
 struct midProfileElement: View {
     @Binding var currentImageName: String
@@ -76,7 +106,7 @@ struct botProfileElement: View {
                     if currentPage == .regular {
                         HomeProfileView(userData: $userData, currentPage: $currentPage, currentImageName: $currentImageName)
                     } else if currentPage == .spf {
-                        SPFInputView(userData: $userData, currentPage: $currentPage)
+                        SPFInputView(userData: $userData, currentPage: $currentPage, currentImageName: $currentImageName)
                     } else {
                         OptionSelectionView(userData: $userData, currentPage: $currentPage, currentImageName: $currentImageName)
                     }
@@ -237,6 +267,7 @@ struct OptionSelectionView: View {
 struct SPFInputView: View {
     @Binding var userData: UserData
     @Binding var currentPage: Page
+    @Binding var currentImageName: String
     
     var body: some View {
         VStack {
@@ -255,6 +286,7 @@ struct SPFInputView: View {
                 Button("Done") {
                     SharedDataManager.shared.saveUserData(userData)
                     currentPage = .regular
+                    currentImageName = "regular"
                 }
                 .font(.system(size: 18, weight: .regular))
                 .foregroundColor(.textPrimary)
@@ -281,40 +313,129 @@ enum RegularOption: String, CaseIterable {
     var title: String { rawValue }
 }
 
-//  MARK: 3. for plotting UV index
+//  MARK: 3. for elements on the UV dashboard
+struct dashboardFloatElement: View {
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                RoundedRectangle(cornerRadius: 25)
+                    .fill(Color.white)
+                    .shadow(color: Color.blue.opacity(0.15), radius: 5.7, x: 0, y: 5)
+                
+                RoundedRectangle(cornerRadius: 25)
+                    .fill(Color.textPrimary.opacity(0.05))
+                
+                VStack {
+                    HStack(alignment: .center, spacing: 4) {
+                        Spacer(minLength: geometry.size.width * 0.1)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("next")
+                                .font(.system(size: 18, weight: .regular))
+                                .foregroundColor(.textPrimary)
+                            Text("apply")
+                                .font(.system(size: 18, weight: .regular))
+                                .foregroundColor(.textPrimary)
+                        }.frame(width: geometry.size.width * 0.2)
+                        
+                        Text(UIDisplayFunctions().displayNextTime())
+                            .font(Font.system(size: 47, weight: .bold))
+                            .foregroundColor(.textAccent)
+                            .frame(width: geometry.size.width * 0.8)
+                    }
+                    .frame(height: geometry.size.height * 0.7)
+                    
+                    DottedDivider(isHorizontal: true)
+                    
+                    HStack {
+                        HStack(spacing: 4) {
+                            Image(systemName: "lightspectrum.horizontal")
+                                .foregroundColor(.textPrimary)
+                            Text("UVI \(SharedDataManager.shared.getEnvironmentData().uv, specifier: "%.1f")")
+                                .font(.system(size: 18, weight: .regular))
+                                .foregroundColor(.textPrimary)
+                        }
+                        .frame(width: geometry.size.width / 2)
+                        
+                        DottedDivider()
+                        
+                        Button(action: {
+                            LocationService().getCurrentLocation {_ in}
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "location.circle")
+                                    .foregroundColor(.textPrimary)
+                                Text(SharedDataManager.shared.getEnvironmentData().cityName)
+                                    .font(.system(size: 18, weight: .regular))
+                                    .foregroundColor(.textPrimary)
+                            }
+                            .frame(width: geometry.size.width / 2)}
+                    }
+                    .frame(height: geometry.size.height * 0.3)
+                }
+            }
+            .frame(width: geometry.size.width, alignment: .top)
+        }
+    }
+}
+
 struct UVIndexView: View {
     let envData = SharedDataManager.shared.getEnvironmentData()
     @State private var smoothnessFactor: CGFloat = 0.45
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("\(UIDisplayFunctions().convertToSPFRecommendation()) is recommended for today/tomorrow's sun intensity")
-                .font(.bodyCustom)
-                .foregroundColor(.textPrimary)
-            
-            if let firstForecastDate = envData.uvForecasts.first?.0 ,
-               let lastForecastTime = envData.uvForecasts.last?.0 {
+        GeometryReader { geometry in
+            VStack(alignment: .center) {
+                Spacer(minLength: 30)
+                DottedDivider(isHorizontal: true)
                 
-                if Calendar.current.isDate(Date(), inSameDayAs: firstForecastDate) && firstForecastDate <= Date() && Date() <= lastForecastTime {
-                    UVChartFunctions.plotEnhancedChart(dataPoints: envData.uvForecasts, smoothnessFactor: smoothnessFactor, currentDate: Date())
-                        .frame(height: 220)
-                        .frame(maxWidth: .infinity)
-                } else {
-                    UVChartFunctions.plotBasicChart(dataPoints: envData.uvForecasts, smoothnessFactor: smoothnessFactor)
-                        .frame(height: 220)
-                        .frame(maxWidth: .infinity)
+                Text("Based on your skin type and")
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundColor(.textPrimary)
+                
+                Text("the sun intensity on \(envData.uvForecasts.first?.0 ?? Date(), format: .dateTime.month(.abbreviated).day().weekday()),")
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundColor(.textPrimary)
+                
+                Text("use \(UIDisplayFunctions().convertToSPFRecommendation())")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.textAccent)
+                
+                Text("to protect your skin.")
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundColor(.textPrimary)
+                
+                DottedDivider(isHorizontal: true)
+                Spacer(minLength: 30)
+                
+                HStack(spacing: 4) {
+                    Image(systemName: "lightspectrum.horizontal")
+                        .foregroundColor(.textPrimary)
+                    
+                    Text("UV Index")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.textPrimary)
                 }
+                
+                if let firstForecastDate = envData.uvForecasts.first?.0 ,
+                   let lastForecastTime = envData.uvForecasts.last?.0 {
+                    
+                    if Calendar.current.isDate(Date(), inSameDayAs: firstForecastDate) && firstForecastDate <= Date() && Date() <= lastForecastTime {
+                        UVChartFunctions.plotEnhancedChart(dataPoints: envData.uvForecasts, smoothnessFactor: smoothnessFactor, currentDate: Date())
+                            .frame(height: geometry.size.height * 0.5)
+                            .frame(width: geometry.size.width * 0.9, alignment: .center)
+                    } else {
+                        UVChartFunctions.plotBasicChart(dataPoints: envData.uvForecasts, smoothnessFactor: smoothnessFactor)
+                            .frame(height: geometry.size.height * 0.5)
+                            .frame(width: geometry.size.width * 0.9, alignment: .center)
+                    }
+                }
+                Spacer()
             }
+            .padding(.bottom, geometry.size.height * 0.05)
         }
-        .padding()
-        .background(Color.textPrimary.opacity(0.07))
-        .cornerRadius(25)
-        //  MARK: *** bug *** shadow is for text, not for the background
-        .shadow(color: Color.blue.opacity(0.25), radius: 5.7, x: 0, y: 5)
     }
 }
 
-//  MARK: 4. for reapplication button
 struct FloatingButton: View {
     @State private var pressAble: Bool = false
     var action: () -> Void
