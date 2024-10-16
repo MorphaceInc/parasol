@@ -3,7 +3,7 @@ import AVKit
 
 
 struct VideoView: View {
-    @StateObject var videoManager = VideoManager()
+    @ObservedObject var videoManager : VideoManager
     var video: Video
     @State private var player = AVPlayer()
     
@@ -19,7 +19,8 @@ struct VideoView: View {
                        let url = URL(string: link) {
                         player = AVPlayer(url: url)
                         player.play()
-                        videoManager.setCurrInd(currind: video.pos)
+                        print(videoManager.currentIndex)
+                       videoManager.setCurrInd(currind: video.pos)
                     }
                 }
                 .onDisappear {
@@ -31,6 +32,7 @@ struct VideoView: View {
             Color.clear
                 .contentShape(Rectangle())
                 .onTapGesture {
+                    print(videoManager.currentIndex)
                     if let link = videoManager.getNextVideo()?.videoFiles.first?.link,
                        let url = URL(string: link) {
                         player = AVPlayer(url: url)
@@ -45,8 +47,4 @@ struct VideoView: View {
     }
 }
 
-struct VideoView_Previews: PreviewProvider {
-    static var previews: some View {
-        VideoView(video: previewVideo) // Replace with your preview video object
-    }
-}
+

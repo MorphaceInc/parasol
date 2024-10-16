@@ -26,7 +26,7 @@ class VideoManager: ObservableObject {
         }
     }
     
-    private var currentIndex: Int = 0
+    @Published var currentIndex: Int = 0
     
     init() {
         Task.init {
@@ -75,6 +75,7 @@ class VideoManager: ObservableObject {
 
     // Method to get the next video
     func getNextVideo() -> Video? {
+        print(currentIndex)
         guard !videos.isEmpty else { return nil }
         currentIndex = (currentIndex + 1) % videos.count // Wrap around if we reach the end
         let nextVideo = videos[currentIndex]

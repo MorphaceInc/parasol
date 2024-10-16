@@ -9,9 +9,10 @@ import SwiftUI
 
 @main
 struct trythingsApp: App {
+    @ObservedObject var videoManager = VideoManager()
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(videoManager: videoManager)
         }
     }
 }

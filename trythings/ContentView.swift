@@ -2,7 +2,7 @@ import SwiftUI
 
 
 struct ContentView: View {
-    @StateObject var videoManager = VideoManager()
+    @ObservedObject var videoManager : VideoManager
     var columns = [GridItem(.adaptive(minimum: 100), spacing: 20)]
     var body: some View {
         
@@ -99,11 +99,10 @@ struct ContentView: View {
                         ProgressView()
                     } else {
                         LazyVGrid(columns: columns, spacing: 20) {
-                            var i: Int = 1
                             ForEach(videoManager.videos, id: \.id) {
                                 video in
                                 NavigationLink {
-                                    VideoView(video: video)
+                                    VideoView(videoManager: videoManager, video: video )
                                 } label: {
                                     ZStack{
                                         RoundedRectangle(cornerRadius: 10)
@@ -143,8 +142,4 @@ struct ContentView: View {
    
 }
 
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
-    }
-}
+
