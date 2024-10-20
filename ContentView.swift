@@ -15,6 +15,8 @@ struct ContentView: View {
     @ObservedObject private var animationManager = AnimationManager.shared
     @State private var isAnimatingWiggle = true
     @State private var isAnimatingReload = true
+
+    @State private var nextTimeValue: String = ""
     
     //  begin UI use
     @State private var currentPage: Page = .regular
@@ -47,7 +49,9 @@ struct ContentView: View {
                                     .onTapGesture {
                                         Task {
                                             print("case .wiggle .onTapGesture triggered handleButtonPressWithAnimation")
+                                            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
                                             await animationManager.handleButtonPressWithAnimation()
+                                            updateNextTime()
                                             print("case .wiggle .onTapGesture triggered updateButtonState")
                                         }
                                     }
@@ -66,7 +70,7 @@ struct ContentView: View {
                     //  Top panel
                     GeometryReader { geometry in
                         VStack(spacing: 0) {
-                            dashboardFloatElement()
+                            dashboardFloatElement(nextTimeString: $nextTimeValue, updateNextTime: updateNextTime)
                                 .frame(width: geometry.size.width * 0.75, height: geometry.size.height * 0.25)
                             Spacer()
                         }
@@ -79,6 +83,7 @@ struct ContentView: View {
             .tabItem {
                 Image(systemName: "sun.horizon.fill")
             }.onAppear {
+                updateNextTime()
                 animationManager.updateCurrentView()
                 if isFirstLaunch() {
                     print("first ever launch detected")
@@ -96,7 +101,11 @@ struct ContentView: View {
             .overlay(
                 FloatingButton() {
                     print("floating button pressed!")
-                    Task { await animationManager.handleButtonPressWithAnimation() }
+                    Task { 
+                        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                        await animationManager.handleButtonPressWithAnimation()
+                        updateNextTime()
+                    }
                 }.disabled(AnimationManager.shared.isLoading)
             )
             
@@ -142,6 +151,8 @@ struct ContentView: View {
                     midProfileElement(currentImageName: $currentImageName, geometry: geometry)
                     
                     botProfileElement(userData: $userData, currentPage: $currentPage, currentImageName: $currentImageName, geometry: geometry)
+                    
+                    Spacer(minLength: geometry.size.height * 0.1)
                     
                 }
                 .background(Color.backgroundPrimary)
@@ -241,6 +252,10 @@ struct ContentView: View {
             return true
         }
         return false
+    }
+    
+    private func updateNextTime() {
+        nextTimeValue = UIDisplayFunctions().displayNextTime()
     }
 }
 

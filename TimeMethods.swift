@@ -141,20 +141,21 @@ class StateManager {
     }
 
     //  MARK: 3. Background sunset tasks: updating tomorrow uv and SPF recommendation
-    //  MARK: *** we're not calling performSunsetTasks here?
     func scheduleSunsetTasks() {
         let envData = SharedDataManager.shared.getEnvironmentData()
-        print("executing function scheduleSunSetTasks, at time \(envData.sunsetTime)")
+        guard envData.sunsetTime > Date() else {
+            print("Cannot schedule task: sunset time is in the past")
+            return
+        }
         
         let request = BGAppRefreshTaskRequest(identifier: "group.com.morphace.parasol.refresh")
         request.earliestBeginDate = envData.sunsetTime
-        do { 
+        do {
             try BGTaskScheduler.shared.submit(request)
-            print("scheduled task for \(envData.sunsetTime)")
+            print("Scheduled task for \(envData.sunsetTime)")
         } catch {
-            //  MARK: *** try again in...?
-            //  MARK: *** it's erroring out right now
-            print("can't schedule app refresh \(error)")
+            print("Can't schedule app refresh: \(error)")
+            //  MARK: *** retry mechanism needed
         }
     }
     

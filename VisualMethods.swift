@@ -14,13 +14,13 @@ import ImageIO
 struct UVChartFunctions {
     //  plotting without sun indicator
     static func plotBasicChart(dataPoints: [(Date, Double)], smoothnessFactor: CGFloat) -> some View {
-        GeometryReader { geometry in
+        GeometryReader { plotGeometry in
             VStack {
-                ZStack {
-                    yAxisLabels(maxUV: dataPoints.map { $0.1 }.max() ?? 1, geometry: geometry)
-                    curvePath(dataPoints: dataPoints, smoothnessFactor: smoothnessFactor, geometry: geometry)
+                ZStack() {
+                    yAxisLabels(maxUV: dataPoints.map { $0.1 }.max() ?? 1, geometry: plotGeometry)
+                    curvePath(dataPoints: dataPoints, smoothnessFactor: smoothnessFactor, geometry: plotGeometry)
                 }
-                xAxisLabels(dataPoints: dataPoints, geometry: geometry)
+                xAxisLabels(dataPoints: dataPoints, geometry: plotGeometry)
             }
         }
     }
@@ -43,16 +43,18 @@ struct UVChartFunctions {
     //  smoothing the plot
     private static func curvePath(dataPoints: [(Date, Double)], smoothnessFactor: CGFloat, geometry: GeometryProxy) -> some View {
         let maxUV = dataPoints.map { $0.1 }.max() ?? 1
+        let chartWidth = geometry.size.width * 0.8
+        let horizontalPadding = (geometry.size.width - chartWidth) / 2
         
         return Path { path in
-            let xScale = (geometry.size.width - 40) / CGFloat(dataPoints.count - 1)
-            let yScale = (geometry.size.height - 40) / CGFloat(maxUV)
+            let xScale = chartWidth / CGFloat(dataPoints.count - 1)
+            let yScale = geometry.size.height * 0.8 / CGFloat(maxUV)
             
             guard dataPoints.count > 3 else { return }
             
             let points = dataPoints.enumerated().map { (index, point) in
                 CGPoint(
-                    x: CGFloat(index) * xScale + 40,
+                    x: CGFloat(index) * xScale + horizontalPadding,
                     y: geometry.size.height - 40 - CGFloat(point.1) * yScale
                 )
             }
@@ -117,40 +119,44 @@ struct UVChartFunctions {
                     Text(formatter.string(from: NSNumber(value: maxUV * Double(stepCount - i) / Double(stepCount))) ?? "")
                         .font(.captionCustom)
                         .foregroundColor(.textPrimary)
-                        .frame(width: 30, alignment: .trailing)
                 }
             }
         }
         .frame(height: geometry.size.height - 40)
-        .offset(y: -10)  // Adjust vertical alignment
     }
     
     private static func xAxisLabels(dataPoints: [(Date, Double)], geometry: GeometryProxy) -> some View {
         let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "Ha"
+        dateFormatter.dateFormat = "ha"
+        dateFormatter.amSymbol = "am"
+        dateFormatter.pmSymbol = "pm"
         
-        let markedHours = [9, 12, 15, 18]
-        let calendar = Calendar.current
-        
-        func findNearestPoint(for hour: Int) -> CGFloat {
-            let targetDate = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: dataPoints[0].0)!
-            let index = dataPoints.indices.min(by: { abs(calendar.dateComponents([.minute], from: dataPoints[$0].0, to: targetDate).minute ?? 0) < abs(calendar.dateComponents([.minute], from: dataPoints[$1].0, to: targetDate).minute ?? 0) }) ?? 0
-            let position = CGFloat(index) / CGFloat(dataPoints.count - 1)
-            return position * geometry.size.width
+        guard let startDate = dataPoints.map({ $0.0 }).min(),
+              let endDate = dataPoints.map({ $0.0 }).max() else {
+            return AnyView(EmptyView())
         }
         
-        let labelPositions = markedHours.map { findNearestPoint(for: $0) }
+        let timeInterval = endDate.timeIntervalSince(startDate)
+        let numberOfLabels = 4
+        let intervalBetweenLabels = timeInterval / Double(numberOfLabels - 1)
         
-        return ZStack(alignment: .leading) {
-            ForEach(Array(zip(markedHours, labelPositions)), id: \.0) { hour, position in
-                Text(dateFormatter.string(from: calendar.date(bySettingHour: hour, minute: 0, second: 0, of: dataPoints[0].0)!).lowercased())
-                    .font(.captionCustom)
-                    .foregroundColor(.textPrimary)
-                    .frame(width: 40)
-                    .offset(x: position - 20)
+        return AnyView(
+            HStack {
+                Spacer()
+                HStack(spacing: 0) {
+                    ForEach(0..<numberOfLabels, id: \.self) { index in
+                        let labelDate = startDate.addingTimeInterval(Double(index) * intervalBetweenLabels)
+                        let hourString = dateFormatter.string(from: labelDate)
+                        Text(hourString)
+                            .font(.captionCustom)
+                            .foregroundColor(.textPrimary)
+                            .frame(width: geometry.size.width * 0.8 / CGFloat(numberOfLabels))
+                    }
+                }
+                .frame(height: 20)
+                Spacer()
             }
-        }
-        .frame(width: geometry.size.width, height: 20, alignment: .leading)
+        )
     }
     
     private static func positionForDate(_ date: Date, dataPoints: [(Date, Double)], in geometry: GeometryProxy) -> CGPoint {
@@ -213,37 +219,40 @@ struct UIDisplayFunctions {
 }
 
 //  MARK: 3. setting up view for sunscreen bottle
+class TextureManager {
+    static let shared = TextureManager()
+    var textures: [SKTexture] = []
+    
+    private init() {
+        let atlas = SKTextureAtlas(named: "DrainAtlas")
+        textures = (0...299).map { atlas.textureNamed("Drain_\($0)") }
+    }
+}
+
 class DrainScene: SKScene {
     private var spriteNode: SKSpriteNode!
-    private var textureAtlas: SKTextureAtlas!
-    private(set) var textures: [SKTexture] = []
     var onSetupComplete: (() -> Void)?
     
     override func didMove(to view: SKView) {
-        loadTextures()
         setupSprite()
         onSetupComplete?()
     }
     
-    private func loadTextures() {
-        textureAtlas = SKTextureAtlas(named: "DrainAtlas")
-        textures = (0...299).compactMap { textureAtlas.textureNamed("Drain_\($0)") }
-    }
-    
     private func setupSprite() {
-        spriteNode = SKSpriteNode(texture: textures.first)
+        spriteNode = SKSpriteNode(texture: TextureManager.shared.textures.first)
         spriteNode.position = CGPoint(x: frame.midX, y: frame.midY)
         addChild(spriteNode)
     }
     
     func updateToFrame(_ frame: Int) {
-        guard frame < textures.count else {
-            print("out of bounds with frame \(frame) and texture number \(textures.count)")
+        guard frame < TextureManager.shared.textures.count else {
+            print("out of bounds with frame \(frame) and texture number \(TextureManager.shared.textures.count)")
             return
         }
-        spriteNode.texture = textures[frame]
+        spriteNode.texture = TextureManager.shared.textures[frame]
     }
 }
+
 
 //  MARK: 3.a) calculating frame of depleting sunscreen
 struct SunscreenDepletionView: View {

@@ -111,7 +111,6 @@ struct botProfileElement: View {
                         OptionSelectionView(userData: $userData, currentPage: $currentPage, currentImageName: $currentImageName)
                     }
                 }
-                .padding()
             }
             .frame(width: geometry.size.width * 0.75)
             .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
@@ -315,6 +314,9 @@ enum RegularOption: String, CaseIterable {
 
 //  MARK: 3. for elements on the UV dashboard
 struct dashboardFloatElement: View {
+    @Binding var nextTimeString: String
+    var updateNextTime: () -> Void
+    
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -326,7 +328,7 @@ struct dashboardFloatElement: View {
                     .fill(Color.textPrimary.opacity(0.05))
                 
                 VStack {
-                    HStack(alignment: .center, spacing: 4) {
+                    HStack(alignment: .center, spacing: 2) {
                         Spacer(minLength: geometry.size.width * 0.1)
                         VStack(alignment: .leading, spacing: 4) {
                             Text("next")
@@ -337,7 +339,7 @@ struct dashboardFloatElement: View {
                                 .foregroundColor(.textPrimary)
                         }.frame(width: geometry.size.width * 0.2)
                         
-                        Text(UIDisplayFunctions().displayNextTime())
+                        Text(nextTimeString)
                             .font(Font.system(size: 47, weight: .bold))
                             .foregroundColor(.textAccent)
                             .frame(width: geometry.size.width * 0.8)
@@ -376,6 +378,7 @@ struct dashboardFloatElement: View {
             .frame(width: geometry.size.width, alignment: .top)
         }
     }
+
 }
 
 struct UVIndexView: View {
@@ -421,15 +424,14 @@ struct UVIndexView: View {
                     
                     if Calendar.current.isDate(Date(), inSameDayAs: firstForecastDate) && firstForecastDate <= Date() && Date() <= lastForecastTime {
                         UVChartFunctions.plotEnhancedChart(dataPoints: envData.uvForecasts, smoothnessFactor: smoothnessFactor, currentDate: Date())
-                            .frame(height: geometry.size.height * 0.5)
-                            .frame(width: geometry.size.width * 0.9, alignment: .center)
+                            .frame(height: UIScreen.main.bounds.height * 0.25)
+                            Spacer()
                     } else {
                         UVChartFunctions.plotBasicChart(dataPoints: envData.uvForecasts, smoothnessFactor: smoothnessFactor)
-                            .frame(height: geometry.size.height * 0.5)
-                            .frame(width: geometry.size.width * 0.9, alignment: .center)
+                            .frame(height: UIScreen.main.bounds.height * 0.25)
+                            Spacer()
                     }
                 }
-                Spacer()
             }
             .padding(.bottom, geometry.size.height * 0.05)
         }
@@ -439,36 +441,40 @@ struct UVIndexView: View {
 struct FloatingButton: View {
     @State private var pressAble: Bool = false
     var action: () -> Void
-    
+
     var body: some View {
         Button(action: {
             if pressAble {
                 action()
             }
         }) {
-            Image(systemName: "plus")
-                .foregroundColor(.white)
-                .frame(width: 60, height: 60)
-                .background(
-                    Circle()
-                        .fill(buttonColor)
-                )
-                .shadow(radius: 5)
+            // Button content: icon and text in HStack
+            HStack {
+                Image(systemName: "checkmark.gobackward")
+                    .foregroundColor(.white)
+                Text("Reapply Now")
+                    .foregroundColor(.white)
+                    .fontWeight(.bold)
+            }
+            .padding()
+            .background(buttonColor)
+            .cornerRadius(30)
         }
         .disabled(!pressAble)
+        .opacity(pressAble ? 1 : 0.6) // Make button appear less vibrant if not pressable
         .onAppear {
             pressAble = StateManager.shared.canPressButton()
         }
-        .position(x: UIScreen.main.bounds.width - 60, y: UIScreen.main.bounds.height - 200)
+        .position(x: UIScreen.main.bounds.width - 120, y: UIScreen.main.bounds.height - 200)
     }
-    
+
     private var buttonColor: Color {
         if !pressAble {
             return .gray
-        } else if Date() > SharedDataManager.shared.getEnvironmentData().nextTime {
-            return .orange
+        } else if Date() > SharedDataManager.shared.getEnvironmentData().sunsetTime {
+            return Color.gray.opacity(0.7)
         } else {
-            return .blue
+            return Color.orange
         }
     }
 }
