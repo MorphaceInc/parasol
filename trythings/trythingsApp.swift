@@ -9,7 +9,7 @@ import SwiftUI
 
 @main
 struct trythingsApp: App {
-    @ObservedObject var videoManager = VideoManager()
+    @StateObject var videoManager = VideoManager() // Use @StateObject to own the instance
     var body: some Scene {
         WindowGroup {
             ContentView(videoManager: videoManager)

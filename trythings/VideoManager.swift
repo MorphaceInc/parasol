@@ -13,7 +13,9 @@ enum Query: String, CaseIterable {
 
 class VideoManager: ObservableObject {
     //class Video Manager (instance of class can be made in different places).  (blueprint).... Classes have attributes, functions
-    // ObservableObject means that the views that use it will reload as it changes, Published also does this
+    // ObservableObject means that the views that use it will reload as it changes, Published is for variables that do this
+    
+
     @Published private(set) var videos: [Video] = []
     //
     
@@ -72,6 +74,8 @@ class VideoManager: ObservableObject {
             print("Error fetching data from Pexels: \(error)")
         }
     }
+    
+    
 
     // Method to get the next video
     func getNextVideo() -> Video? {

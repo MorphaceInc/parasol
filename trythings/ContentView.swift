@@ -6,10 +6,7 @@ struct ContentView: View {
     var columns = [GridItem(.adaptive(minimum: 100), spacing: 20)]
     var body: some View {
         
-        
-        
-        NavigationView {
-            
+                NavigationView {
             
             VStack() {
                 // Gradient background that only spans above the text
@@ -87,10 +84,6 @@ struct ContentView: View {
                             .multilineTextAlignment(.leading) // Align text within its frame
                     }
                     
-                    
-                    
-                
-                
                 
                 HStack(alignment: .top, spacing: 20) { // Adjust spacing as needed
                     
@@ -99,6 +92,7 @@ struct ContentView: View {
                         ProgressView()
                     } else {
                         LazyVGrid(columns: columns, spacing: 20) {
+                            //lazy grid only renders what it needs to 
                             ForEach(videoManager.videos, id: \.id) {
                                 video in
                                 NavigationLink {

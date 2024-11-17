@@ -4,7 +4,8 @@ import AVKit
 
 struct VideoView: View {
     @ObservedObject var videoManager : VideoManager
-    @State var video: Video
+    //inherited by a parent function, so you use ObservedObject for swift to watch object and update view if changes
+    @State var video: Video //fields that will update if changed 
     @State private var player = AVPlayer()
     @State var progressValue : Int =  0
    @State var timer : Timer? = nil
