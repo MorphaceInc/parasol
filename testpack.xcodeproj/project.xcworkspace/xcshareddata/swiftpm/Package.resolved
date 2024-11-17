@@ -1,0 +1,24 @@
+{
+  "originHash" : "9434bb492f9f776651e27c581e2034351c0f120dc9380f131b58b0e37f688fa9",
+  "pins" : [
+    {
+      "identity" : "cachingplayeritem",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/sukov/CachingPlayerItem.git",
+      "state" : {
+        "revision" : "4fd9bfc4b79f5aca434e1a7020606a28ef442d41",
+        "version" : "1.1.3"
+      }
+    },
+    {
+      "identity" : "samplepackage",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/twostraws/SamplePackage",
+      "state" : {
+        "revision" : "f34f8498db05cf519000a9e5a6a14872ccc69ada",
+        "version" : "1.0.0"
+      }
+    }
+  ],
+  "version" : 3
+}
