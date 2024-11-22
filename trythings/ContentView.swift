@@ -120,6 +120,7 @@ struct ContentView: View {
                     }
                 }
             }
+<<<<<<< Updated upstream
                     
                     
                     
@@ -127,6 +128,9 @@ struct ContentView: View {
                 
                 
                 
+=======
+                                    
+>>>>>>> Stashed changes
             }
         }.navigationViewStyle(.stack)
       

@@ -5,7 +5,11 @@
 //  Created by Stephanie Diep on 2022-01-18.
 //
 
+<<<<<<< Updated upstream
 import Foundation
+=======
+/*import Foundation
+>>>>>>> Stashed changes
 
 // Global variable for a video dummy data
 var previewVideo: Video = load("videoData.json")
@@ -35,3 +39,7 @@ func load<T: Decodable>(_ filename: String) -> T {
         fatalError("Couldn't parse \(filename) as \(T.self):\n\(error)")
     }
 }
+<<<<<<< Updated upstream
+=======
+*/
+>>>>>>> Stashed changes
